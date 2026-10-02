@@ -1,0 +1,62 @@
+id = "lucaspcq.wtm"
+name = "wtm"
+version = "0.1.0"
+min_herdr_version = "0.9.0"
+description = "Run wtm worktree commands from herdr and keep workspaces in sync"
+platforms = ["linux", "macos"]
+
+[[build]]
+command = ["go", "build", "-o", "bin/herdr-wtm", "./cmd/herdr-wtm"]
+
+[[startup]]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync --all"]
+
+[[panes]]
+id = "run"
+title = "wtm"
+placement = "popup"
+width = "90%"
+height = "90%"
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" run"]
+
+[[actions]]
+id = "create"
+title = "wtm: new worktree"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch create"]
+
+[[actions]]
+id = "checkout"
+title = "wtm: checkout a pull request"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch checkout"]
+
+[[actions]]
+id = "open"
+title = "wtm: open a worktree"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch open"]
+
+[[actions]]
+id = "clean"
+title = "wtm: clean this worktree"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch clean"]
+
+[[actions]]
+id = "prune"
+title = "wtm: prune finished worktrees"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch prune"]
+
+[[actions]]
+id = "ui"
+title = "wtm: dashboard"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch ui"]
+
+[[actions]]
+id = "sync"
+title = "wtm: sync workspaces"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync"]
