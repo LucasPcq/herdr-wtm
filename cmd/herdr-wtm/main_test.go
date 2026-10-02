@@ -99,3 +99,9 @@ func TestMainWiresMenuChooser(t *testing.T) {
 		t.Fatal("Choose not wired")
 	}
 }
+
+func TestMainWiresSignalShield(t *testing.T) {
+	if newDeps(nil, execx.OS{}, "herdr", config.Default()).Shield == nil {
+		t.Fatal("Shield not wired")
+	}
+}

@@ -51,6 +51,10 @@ type Deps struct {
 	Exists   func(string) bool
 	Log      *log.Logger
 	Choose   Chooser
+	// Shield, when set, keeps SIGINT/SIGHUP from killing the process while a
+	// wtm command runs, so its changes still get reconciled; it returns the
+	// function that lifts the shield.
+	Shield func() func()
 }
 
 // fail shows err in the popup and waits for Enter so the user can read it.

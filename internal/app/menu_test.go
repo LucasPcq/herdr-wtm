@@ -138,3 +138,49 @@ func TestRunMenuSyncNothingStaleNotifies(t *testing.T) {
 	}
 	assertHas(t, f, "herdr notification show wtm --body workspaces already in sync")
 }
+
+// The signal shield must only cover the wtm command: while the menu is shown,
+// a hangup (popup closed) has to end the process.
+func TestRunMenuShieldsOnlyTheWtmCommand(t *testing.T) {
+	var events []string
+	d, _, _ := newDeps(func(c execx.Call) ([]byte, error) {
+		if c.Interactive {
+			events = append(events, c.Line())
+		}
+		switch c.Line() {
+		case "wtm list --output json":
+			return listJSON(mainWT()), nil
+		case "herdr workspace list":
+			return workspacesJSON(primaryWS()), nil
+		}
+		return nil, nil
+	})
+	d.Choose = func(string, []menu.Item) (string, error) {
+		events = append(events, "menu")
+		return "prune", nil
+	}
+	d.Shield = func() func() {
+		events = append(events, "shield")
+		return func() { events = append(events, "unshield") }
+	}
+	if err := d.Run("menu", repo, ""); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(events, ","); got != "menu,shield,wtm prune,unshield" {
+		t.Fatalf("events %s", got)
+	}
+}
+
+func TestRunMenuCancelledNeverShields(t *testing.T) {
+	d, _, _ := newDeps(func(c execx.Call) ([]byte, error) {
+		if c.Line() == "wtm list --output json" {
+			return listJSON(mainWT()), nil
+		}
+		return nil, nil
+	})
+	d.Choose = chooser("", nil, nil, nil)
+	d.Shield = func() func() { t.Fatal("shield installed for a cancelled menu"); return func() {} }
+	if err := d.Run("menu", repo, ""); err != nil {
+		t.Fatal(err)
+	}
+}

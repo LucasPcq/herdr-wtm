@@ -62,6 +62,7 @@ func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg confi
 		Exists:   exists,
 		Log:      logger,
 		Choose:   menu.Choose,
+		Shield:   shieldSignals,
 	}
 }
 
@@ -85,7 +86,6 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 		}
 		return err
 	case "run":
-		defer shieldSignals()()
 		return d.Run(getenv(app.EnvCmd), getenv(app.EnvRepo), getenv(app.EnvOrigin))
 	case "sync":
 		all := len(args) > 1 && args[1] == "--all"

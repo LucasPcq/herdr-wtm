@@ -46,7 +46,7 @@ func (d Deps) Run(cmd, repo, origin string) error {
 			args = append(args, branch)
 		}
 	}
-	cmdErr := d.Wtm.Run(repo, args...)
+	cmdErr := d.runShielded(repo, args)
 
 	after, err := d.Wtm.List(repo)
 	if err != nil {
@@ -102,4 +102,13 @@ func branchAt(wts []wtm.Worktree, origin string) string {
 		}
 	}
 	return ""
+}
+
+// runShielded runs the wtm command under the signal shield, and only it: the
+// menu and the error prompt stay killable by a hangup when the popup closes.
+func (d Deps) runShielded(repo string, args []string) error {
+	if d.Shield != nil {
+		defer d.Shield()()
+	}
+	return d.Wtm.Run(repo, args...)
 }
