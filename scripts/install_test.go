@@ -92,10 +92,24 @@ func fakeGo(t *testing.T) string {
 	return dir
 }
 
-// install runs the script with a minimal PATH (system tools, plus extraPath first).
+// toolbox links the tools install.sh uses into a fresh directory, so the
+// script's PATH holds no `go` unless a test adds one (CI runners ship Go in
+// /usr/bin, so the system directories cannot stand in for "Go absent").
+func toolbox(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	for _, name := range []string{"sh", "curl", "wget", "sed", "head", "uname", "tr", "awk", "mktemp", "rm", "tar", "gzip", "mkdir", "mv", "chmod", "dirname", "sha256sum", "shasum", "perl"} {
+		if p, err := exec.LookPath(name); err == nil {
+			must(t, os.Symlink(p, filepath.Join(dir, name)))
+		}
+	}
+	return dir
+}
+
+// install runs the script with an isolated PATH (toolbox, plus extraPath first).
 func install(t *testing.T, root, baseURL, extraPath string, env ...string) (string, error) {
 	t.Helper()
-	path := "/usr/bin:/bin:/usr/sbin:/sbin"
+	path := toolbox(t)
 	if extraPath != "" {
 		path = extraPath + ":" + path
 	}
