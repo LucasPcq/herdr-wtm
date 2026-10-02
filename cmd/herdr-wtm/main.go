@@ -1,6 +1,6 @@
 // Command herdr-wtm is the herdr plugin binary for wtm.
 //
-//	herdr-wtm launch <menu|create|checkout|open|clean|prune|ui>   (herdr action)
+//	herdr-wtm launch <menu|bind|create|checkout|open|clean|prune|ui>   (herdr action)
 //	herdr-wtm run                                           (popup entrypoint)
 //	herdr-wtm sync [--all]                                  (action / startup)
 package main
@@ -63,6 +63,8 @@ func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg confi
 		Log:      logger,
 		Choose:   menu.Choose,
 		Shield:   shieldSignals,
+		// HERDR_CONFIG_PATH overrides herdr's config location, as for herdr itself.
+		HerdrConfig: herdrConfigPath(),
 	}
 }
 
@@ -86,6 +88,9 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 		}
 		return err
 	case "run":
+		if getenv(app.EnvCmd) == app.CmdBind {
+			return d.Bind()
+		}
 		return d.Run(getenv(app.EnvCmd), getenv(app.EnvRepo), getenv(app.EnvOrigin))
 	case "sync":
 		all := len(args) > 1 && args[1] == "--all"
@@ -114,4 +119,12 @@ func newLogger(stateDir string) *log.Logger {
 		}
 	}
 	return log.New(w, "herdr-wtm ", log.LstdFlags)
+}
+
+func herdrConfigPath() string {
+	if p := os.Getenv("HERDR_CONFIG_PATH"); p != "" {
+		return p
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "herdr", "config.toml")
 }

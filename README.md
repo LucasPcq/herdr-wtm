@@ -74,7 +74,21 @@ prebuilt binary fits, it builds from source when Go is installed. Pin a version 
 
 ## Usage
 
-Bind the menu in `~/.config/herdr/config.toml`, then run `herdr server reload-config`:
+Choose the key that opens the menu, once:
+
+```bash
+herdr plugin action invoke lucaspcq.wtm.bind
+```
+
+A small popup asks for the key: press <kbd>Enter</kbd> for the default, <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd>,
+or type your own (`prefix+m`, `ctrl+alt+w`, `f12`…). Keys herdr already uses are refused. The binding is added to
+herdr's `config.toml` (a backup is kept next to it as `config.toml.bak-herdr-wtm`) and the config is reloaded.
+Run it again to change the key.
+
+<details>
+<summary>Or bind it by hand</summary>
+
+Add to `~/.config/herdr/config.toml`, then run `herdr server reload-config`:
 
 ```toml
 [[keys.command]]
@@ -83,6 +97,8 @@ type = "plugin_action"
 command = "lucaspcq.wtm.menu"
 description = "wtm menu"
 ```
+
+</details>
 
 Press it from any workspace of a wtm repository:
 
@@ -103,8 +119,8 @@ Each entry also exists as its own action (`lucaspcq.wtm.create`, `.open`, `.chec
 `.ui`, `.sync`), to bind to a key or run with `herdr plugin action invoke`. Actions run against the repository
 of the workspace you invoke them from.
 
-`alt` combinations depend on your terminal; pick another key if <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd>
-does not reach herdr.
+`alt` combinations depend on your terminal: if <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd> does nothing, run the
+bind action again and pick another key.
 
 ## Configuration
 

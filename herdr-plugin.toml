@@ -26,6 +26,12 @@ contexts = ["workspace"]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch menu"]
 
 [[actions]]
+id = "bind"
+title = "wtm: choose the menu key"
+contexts = ["global", "workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch bind"]
+
+[[actions]]
 id = "create"
 title = "wtm: new worktree"
 contexts = ["workspace"]

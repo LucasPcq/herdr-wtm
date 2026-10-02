@@ -105,3 +105,16 @@ func TestMainWiresSignalShield(t *testing.T) {
 		t.Fatal("Shield not wired")
 	}
 }
+
+func TestDispatchRunBindAsksForKey(t *testing.T) {
+	f := &execx.Fake{}
+	d := deps(f)
+	d.HerdrConfig = t.TempDir() + "/config.toml"
+	d.In = strings.NewReader("") // cancelled at the prompt
+	if err := dispatch(d, []string{"run"}, env(map[string]string{app.EnvCmd: "bind"})); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(f.Lines(), "herdr --default-config") || slices.ContainsFunc(f.Lines(), func(l string) bool { return strings.HasPrefix(l, "wtm") }) {
+		t.Fatalf("lines %v", f.Lines())
+	}
+}
