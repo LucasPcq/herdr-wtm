@@ -91,3 +91,5 @@ func assertNoPrefix(t *testing.T, f *execx.Fake, prefix string) {
 		}
 	}
 }
+
+func wtm0(path string) wtm.Worktree { return wtm.Worktree{Branch: "main", Path: path, IsParent: true} }
