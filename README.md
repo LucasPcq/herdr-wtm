@@ -125,17 +125,6 @@ what changed. A workspace is only closed when its worktree is gone from wtm and 
 
 Logs go to the plugin's state directory (`herdr-wtm.log`) and to `herdr plugin log list --plugin lucaspcq.wtm`.
 
-## Roadmap
-
-This preview is a starting point. Ideas being explored for a tighter integration:
-
-- Create worktrees from herdr's own *New worktree* menu and have wtm provision them (`.env`, hooks, isolated
-  ports).
-- A persistent side panel listing your worktrees and their state.
-- Ctrl+click a pull request URL to check it out as a worktree.
-
-Have a use case in mind? [Open an issue](https://github.com/LucasPcq/herdr-wtm/issues).
-
 ## Contributing
 
 ```bash
