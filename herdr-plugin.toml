@@ -6,7 +6,7 @@ description = "Run wtm worktree commands from herdr and keep workspaces in sync"
 platforms = ["linux", "macos"]
 
 [[build]]
-command = ["go", "build", "-o", "bin/herdr-wtm", "./cmd/herdr-wtm"]
+command = ["sh", "scripts/install.sh"]
 
 [[startup]]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync --all"]

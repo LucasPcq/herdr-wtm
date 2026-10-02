@@ -14,11 +14,13 @@ One key opens a popup menu of wtm actions — keyboard or mouse:
 
 ## Install
 
-Requires `wtm` and Go (the plugin is built at install time).
-
 ```bash
 herdr plugin install LucasPcq/herdr-wtm
 ```
+
+Requires `wtm`. Installing downloads the prebuilt binary of the manifest's version from the GitHub release
+(`curl` or `wget`, checksum-verified) for macOS and Linux on amd64/arm64. If no release binary fits, it builds
+from source when Go is installed. Pin a version with `--ref v0.1.0`.
 
 ## Actions
 
@@ -70,6 +72,14 @@ popup_height = "90%"
 
 ```bash
 go test ./...
-go build -o bin/herdr-wtm ./cmd/herdr-wtm   # `plugin link` does not run [[build]]
+HERDR_WTM_BUILD_FROM_SOURCE=1 sh scripts/install.sh   # `plugin link` does not run [[build]]
 herdr plugin link "$PWD"
 ```
+
+## Releasing
+
+1. Set `version` in `herdr-plugin.toml` (e.g. `0.2.0`) and commit it on `main`.
+2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
+
+The Release workflow runs the tests, checks the tag matches the manifest version, and publishes the binaries
+with GoReleaser. A tag like `v0.2.0-beta.1` becomes a pre-release.
