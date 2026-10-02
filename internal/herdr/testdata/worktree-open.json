@@ -1,0 +1,4 @@
+{"id":"cli:worktree:open","result":{"type":"worktree_opened","already_open":false,
+  "workspace":{"active_tab_id":"wG:t1","agent_status":"unknown","focused":true,"label":"feat-new","number":4,"pane_count":1,"tab_count":1,"workspace_id":"wG","worktree":{"checkout_path":"/Users/me/dev/app.worktrees/feat-new","is_linked_worktree":true,"repo_key":"/Users/me/dev/app/.git","repo_name":"app","repo_root":"/Users/me/dev/app"}},
+  "tab":{},"root_pane":{},
+  "worktree":{"path":"/Users/me/dev/app.worktrees/feat-new","branch":"feat/new","is_bare":false,"is_detached":false,"is_prunable":false,"is_linked_worktree":true,"label":"feat-new","open_workspace_id":"wG"}}}
