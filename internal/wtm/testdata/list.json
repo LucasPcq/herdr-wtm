@@ -1,0 +1,26 @@
+[
+  {
+    "branch": "main",
+    "path": "/Users/me/dev/app",
+    "is_parent": true,
+    "is_dirty": false,
+    "rebase_in_progress": false,
+    "commits_ahead": 0,
+    "created_at": "2026-07-29T10:05:24.924676582+02:00",
+    "origin": {"ahead": 0, "behind": 0, "state": "up-to-date"},
+    "pr": null,
+    "services": []
+  },
+  {
+    "branch": "feat/login",
+    "path": "/Users/me/dev/app.worktrees/feat login",
+    "is_parent": false,
+    "is_dirty": true,
+    "rebase_in_progress": false,
+    "commits_ahead": 2,
+    "created_at": "2026-09-30T09:00:00+02:00",
+    "origin": {"ahead": 2, "behind": 0, "state": "ahead"},
+    "pr": null,
+    "services": []
+  }
+]
