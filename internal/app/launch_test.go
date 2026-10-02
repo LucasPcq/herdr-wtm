@@ -77,3 +77,12 @@ func TestLaunchRejectsEmptyContextAndUnknownCommand(t *testing.T) {
 		t.Fatalf("calls %v", f.Lines())
 	}
 }
+
+func TestLaunchMenu(t *testing.T) {
+	d, f, _ := newDeps(nil)
+	ctx := herdr.Context{Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+	if err := d.Launch("menu", ctx); err != nil {
+		t.Fatal(err)
+	}
+	assertHas(t, f, "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 90% --height 90% --env HERDR_WTM_CMD=menu --env HERDR_WTM_REPO=/nx/app")
+}

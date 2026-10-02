@@ -3,7 +3,9 @@ package app
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
+	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
@@ -11,7 +13,7 @@ import (
 // Run is the popup entrypoint: run the wtm command, then sync herdr workspaces
 // with what changed.
 func (d Deps) Run(cmd, repo, origin string) error {
-	if !IsCommand(cmd) {
+	if !IsCommand(cmd) && cmd != CmdMenu {
 		return d.fail(fmt.Errorf("unknown command %q", cmd))
 	}
 	if repo == "" {
@@ -20,6 +22,19 @@ func (d Deps) Run(cmd, repo, origin string) error {
 	before, err := d.Wtm.List(repo)
 	if err != nil {
 		return d.fail(err)
+	}
+	if cmd == CmdMenu {
+		chosen, err := d.Choose("wtm · "+filepath.Base(repo), menu.Items(branchAt(before, origin)))
+		if err != nil {
+			return d.fail(err)
+		}
+		switch chosen {
+		case "":
+			return nil
+		case CmdSync:
+			return d.syncRepo(repo)
+		}
+		cmd = chosen
 	}
 	if cmd == "open" {
 		return d.runOpen(repo)

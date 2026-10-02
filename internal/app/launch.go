@@ -11,7 +11,7 @@ import (
 // Launch opens the plugin popup that will run cmd for the repository the
 // action was invoked from.
 func (d Deps) Launch(cmd string, ctx herdr.Context) error {
-	if !IsCommand(cmd) {
+	if !IsCommand(cmd) && cmd != CmdMenu {
 		return fmt.Errorf("unknown command %q", cmd)
 	}
 	repo, err := d.resolveRepo(ctx)

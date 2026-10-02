@@ -13,6 +13,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/config"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
@@ -23,6 +24,15 @@ const (
 	EnvRepo   = "HERDR_WTM_REPO"
 	EnvOrigin = "HERDR_WTM_ORIGIN"
 )
+
+// Pseudo-commands handled by the plugin itself rather than passed to wtm.
+const (
+	CmdMenu = "menu"
+	CmdSync = "sync"
+)
+
+// Chooser shows the action menu and returns the chosen command, or "" when cancelled.
+type Chooser func(title string, items []menu.Item) (string, error)
 
 // Commands are the wtm commands the plugin exposes, in manifest order.
 var Commands = []string{"create", "checkout", "open", "clean", "prune", "ui"}
@@ -40,6 +50,7 @@ type Deps struct {
 	In       io.Reader
 	Exists   func(string) bool
 	Log      *log.Logger
+	Choose   Chooser
 }
 
 // fail shows err in the popup and waits for Enter so the user can read it.
