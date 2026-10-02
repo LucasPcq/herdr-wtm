@@ -41,7 +41,7 @@ func (d Deps) Run(cmd, repo, origin string) error {
 	if err != nil {
 		return d.fail(errors.Join(cmdErr, err))
 	}
-	d.apply(repo, reconcile.Diff(before, after, ws))
+	d.apply(repo, reconcile.Diff(before, after, ws, d.Exists))
 	if cmdErr != nil {
 		return d.fail(fmt.Errorf("wtm %s: %w", cmd, cmdErr))
 	}

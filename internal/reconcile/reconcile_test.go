@@ -73,7 +73,7 @@ func TestDiff(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := reconcile.Diff(tt.before, tt.after, tt.ws)
+			got := reconcile.Diff(tt.before, tt.after, tt.ws, gone)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("got %+v, want %+v", got, tt.want)
 			}
@@ -81,8 +81,20 @@ func TestDiff(t *testing.T) {
 	}
 }
 
+func gone(string) bool { return false }
+
+func TestDiffKeepsWorkspaceWhoseFolderStillExists(t *testing.T) {
+	before := []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")}
+	after := []wtm.Worktree{wt(repo)}
+	ws := []herdr.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")}
+	exists := func(p string) bool { return p == "/nx/app.wt/a" }
+	if got := reconcile.Diff(before, after, ws, exists); len(got.Close) != 0 {
+		t.Fatalf("closed a workspace whose folder is still on disk: %+v", got)
+	}
+}
+
 func TestDiffNeverClosesPrimary(t *testing.T) {
-	got := reconcile.Diff([]wtm.Worktree{wt(repo)}, nil, []herdr.Workspace{primary("w1")})
+	got := reconcile.Diff([]wtm.Worktree{wt(repo)}, nil, []herdr.Workspace{primary("w1")}, gone)
 	if len(got.Close) != 0 {
 		t.Fatalf("closed primary: %+v", got)
 	}

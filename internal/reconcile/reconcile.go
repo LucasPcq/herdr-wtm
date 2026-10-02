@@ -16,8 +16,9 @@ type Plan struct {
 func (p Plan) Empty() bool { return len(p.Open) == 0 && len(p.Close) == 0 }
 
 // Diff opens worktrees that appeared between before and after (unless already
-// open) and closes linked workspaces whose worktree disappeared.
-func Diff(before, after []wtm.Worktree, ws []herdr.Workspace) Plan {
+// open) and closes linked workspaces whose worktree disappeared from wtm and
+// from disk.
+func Diff(before, after []wtm.Worktree, ws []herdr.Workspace, exists func(string) bool) Plan {
 	beforeSet, afterSet := pathSet(before), pathSet(after)
 	open := map[string]bool{}
 	for _, w := range ws {
@@ -37,7 +38,7 @@ func Diff(before, after []wtm.Worktree, ws []herdr.Workspace) Plan {
 			continue
 		}
 		p := Normalize(w.Worktree.CheckoutPath)
-		if beforeSet[p] && !afterSet[p] {
+		if beforeSet[p] && !afterSet[p] && !exists(w.Worktree.CheckoutPath) {
 			plan.Close = append(plan.Close, w.ID)
 		}
 	}
