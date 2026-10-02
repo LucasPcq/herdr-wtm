@@ -20,6 +20,12 @@ height = "90%"
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" run"]
 
 [[actions]]
+id = "menu"
+title = "wtm: menu"
+contexts = ["workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch menu"]
+
+[[actions]]
 id = "create"
 title = "wtm: new worktree"
 contexts = ["workspace"]

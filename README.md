@@ -3,12 +3,14 @@
 A [herdr](https://herdr.dev) plugin for [wtm](https://github.com/LucasPcq/wtm): run wtm from herdr and keep
 your workspace bar in sync with your worktrees.
 
-- **New worktree / checkout a PR / dashboard / prune / clean:** wtm runs in a herdr popup, wizard
-  included. When it exits, worktrees it created open as workspaces and workspaces of worktrees it removed
-  close.
+One key opens a popup menu of wtm actions — keyboard or mouse:
+
+- **New worktree / checkout a PR / dashboard / prune / clean:** the chosen wtm command runs in the popup,
+  wizard included. When it exits, worktrees it created open as workspaces and workspaces of worktrees it
+  removed close.
 - **Open a worktree:** wtm's picker, then herdr focuses the workspace (or opens it).
-- **Sync:** closes workspaces whose worktree no longer exists (cleaned from another shell, by an agent…).
-  Runs at herdr startup too. It never opens anything.
+- **Sync workspaces:** closes workspaces whose worktree no longer exists (cleaned from another shell, by an
+  agent…). Runs at herdr startup too. It never opens anything.
 
 ## Install
 
@@ -22,6 +24,7 @@ herdr plugin install LucasPcq/herdr-wtm
 
 | Action | Does |
 |---|---|
+| `lucaspcq.wtm.menu` | the action menu (bind this one) |
 | `lucaspcq.wtm.create` | `wtm create` |
 | `lucaspcq.wtm.checkout` | `wtm checkout` |
 | `lucaspcq.wtm.open` | `wtm resolve` picker → focus/open the workspace |
@@ -34,35 +37,19 @@ Actions run against the repository of the workspace you invoke them from.
 
 ## Key bindings
 
-The plugin binds nothing. Add what you want to `~/.config/herdr/config.toml`, then `herdr server reload-config`:
+Bind the menu in `~/.config/herdr/config.toml`, then `herdr server reload-config`:
 
 ```toml
 [[keys.command]]
-key = "prefix+alt+c"
+key = "prefix+alt+w"
 type = "plugin_action"
-command = "lucaspcq.wtm.create"
-description = "wtm: new worktree"
-
-[[keys.command]]
-key = "prefix+alt+o"
-type = "plugin_action"
-command = "lucaspcq.wtm.open"
-description = "wtm: open a worktree"
-
-[[keys.command]]
-key = "prefix+alt+x"
-type = "plugin_action"
-command = "lucaspcq.wtm.clean"
-description = "wtm: clean this worktree"
-
-[[keys.command]]
-key = "prefix+alt+u"
-type = "plugin_action"
-command = "lucaspcq.wtm.ui"
-description = "wtm: dashboard"
+command = "lucaspcq.wtm.menu"
+description = "wtm menu"
 ```
 
-`alt` combinations depend on your terminal; pick other keys if they do not reach herdr.
+In the menu: ↑↓ or j/k, Enter, 1-7 to run directly, Esc to close; or click an entry. The individual actions
+can be bound the same way if you want a direct key for one of them. `alt` combinations depend on your
+terminal; pick another key if it does not reach herdr.
 
 ## Configuration
 

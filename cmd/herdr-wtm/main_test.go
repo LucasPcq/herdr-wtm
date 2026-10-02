@@ -82,3 +82,20 @@ func TestDispatchUsage(t *testing.T) {
 		}
 	}
 }
+
+func TestDispatchLaunchMenu(t *testing.T) {
+	f := &execx.Fake{}
+	ctx := `{"worktree":{"checkout_path":"/nx/app","repo_root":"/nx/app","is_linked_worktree":false}}`
+	if err := dispatch(deps(f), []string{"launch", "menu"}, env(map[string]string{"HERDR_PLUGIN_CONTEXT_JSON": ctx})); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(f.Lines()[0], "--env HERDR_WTM_CMD=menu") {
+		t.Fatalf("lines %v", f.Lines())
+	}
+}
+
+func TestMainWiresMenuChooser(t *testing.T) {
+	if newDeps(nil, execx.OS{}, "herdr", config.Default()).Choose == nil {
+		t.Fatal("Choose not wired")
+	}
+}

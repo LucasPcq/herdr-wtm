@@ -1,6 +1,6 @@
 // Command herdr-wtm is the herdr plugin binary for wtm.
 //
-//	herdr-wtm launch <create|checkout|open|clean|prune|ui>   (herdr action)
+//	herdr-wtm launch <menu|create|checkout|open|clean|prune|ui>   (herdr action)
 //	herdr-wtm run                                           (popup entrypoint)
 //	herdr-wtm sync [--all]                                  (action / startup)
 package main
@@ -18,6 +18,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/config"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
@@ -41,9 +42,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	d := app.Deps{
+	d := newDeps(logger, runner, herdrBin, cfg)
+	if err := dispatch(d, os.Args[1:], os.Getenv); err != nil {
+		logger.Printf("%s: %v", strings.Join(os.Args[1:], " "), err)
+		os.Exit(1)
+	}
+}
+
+// newDeps wires the real collaborators.
+func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg config.Config) app.Deps {
+	return app.Deps{
 		Wtm:      wtm.Client{Runner: runner, Bin: cfg.WtmBin},
-		Herdr:    hc,
+		Herdr:    herdr.Client{Runner: runner, Bin: herdrBin},
 		Git:      runner,
 		Config:   cfg,
 		PluginID: pluginID,
@@ -51,10 +61,7 @@ func main() {
 		In:       os.Stdin,
 		Exists:   exists,
 		Log:      logger,
-	}
-	if err := dispatch(d, os.Args[1:], os.Getenv); err != nil {
-		logger.Printf("%s: %v", strings.Join(os.Args[1:], " "), err)
-		os.Exit(1)
+		Choose:   menu.Choose,
 	}
 }
 
