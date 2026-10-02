@@ -114,3 +114,34 @@ func (c Client) run(args ...string) error {
 	}
 	return nil
 }
+
+// DefaultConfig returns `herdr --default-config`, the documented defaults.
+func (c Client) DefaultConfig() (string, error) {
+	out, err := c.Runner.Output("", c.Bin, "--default-config")
+	if err != nil {
+		return "", fmt.Errorf("herdr --default-config: %w", err)
+	}
+	return string(out), nil
+}
+
+// ReloadConfig asks the server to reload config.toml and fails unless herdr
+// applied it without diagnostics.
+func (c Client) ReloadConfig() error {
+	out, err := c.Runner.Output("", c.Bin, "server", "reload-config")
+	if err != nil {
+		return fmt.Errorf("herdr server reload-config: %w", err)
+	}
+	var resp struct {
+		Result struct {
+			Status      string            `json:"status"`
+			Diagnostics []json.RawMessage `json:"diagnostics"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return fmt.Errorf("parse herdr server reload-config: %w", err)
+	}
+	if resp.Result.Status != "applied" || len(resp.Result.Diagnostics) > 0 {
+		return fmt.Errorf("herdr did not apply the config (status %q): %s", resp.Result.Status, out)
+	}
+	return nil
+}

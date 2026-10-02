@@ -29,6 +29,7 @@ const (
 const (
 	CmdMenu = "menu"
 	CmdSync = "sync"
+	CmdBind = "bind"
 )
 
 // Chooser shows the action menu and returns the chosen command, or "" when cancelled.
@@ -55,6 +56,8 @@ type Deps struct {
 	// wtm command runs, so its changes still get reconciled; it returns the
 	// function that lifts the shield.
 	Shield func() func()
+	// HerdrConfig is the path of herdr's config.toml, edited by Bind.
+	HerdrConfig string
 }
 
 // fail shows err in the popup and waits for Enter so the user can read it.

@@ -1,0 +1,38 @@
+version: 2
+
+project_name: herdr-wtm
+
+builds:
+  - main: ./cmd/herdr-wtm
+    binary: herdr-wtm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+# scripts/install.sh downloads exactly this name: keep them in sync.
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+# A tag with a prerelease part (v0.2.0-beta.1) becomes a GitHub pre-release.
+release:
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"

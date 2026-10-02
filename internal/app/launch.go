@@ -11,6 +11,13 @@ import (
 // Launch opens the plugin popup that will run cmd for the repository the
 // action was invoked from.
 func (d Deps) Launch(cmd string, ctx herdr.Context) error {
+	if cmd == CmdBind {
+		// Binding a key needs no repository: a small popup with the prompt.
+		return d.Herdr.OpenPopup(herdr.PopupParams{
+			Plugin: d.PluginID, Entrypoint: "run", Width: "72", Height: "14",
+			Env: map[string]string{EnvCmd: CmdBind},
+		})
+	}
 	if !IsCommand(cmd) && cmd != CmdMenu {
 		return fmt.Errorf("unknown command %q", cmd)
 	}

@@ -6,7 +6,7 @@ description = "Run wtm worktree commands from herdr and keep workspaces in sync"
 platforms = ["linux", "macos"]
 
 [[build]]
-command = ["go", "build", "-o", "bin/herdr-wtm", "./cmd/herdr-wtm"]
+command = ["sh", "scripts/install.sh"]
 
 [[startup]]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync --all"]
@@ -24,6 +24,12 @@ id = "menu"
 title = "wtm: menu"
 contexts = ["workspace"]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch menu"]
+
+[[actions]]
+id = "bind"
+title = "wtm: choose the menu key"
+contexts = ["global", "workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" launch bind"]
 
 [[actions]]
 id = "create"
