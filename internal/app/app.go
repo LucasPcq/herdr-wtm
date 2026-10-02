@@ -65,16 +65,16 @@ func (d Deps) fail(err error) error {
 }
 
 // apply closes then opens per plan, focusing the last opened workspace, and
-// notifies a summary. An empty plan with no failures notifies nothing.
-func (d Deps) apply(repo string, plan reconcile.Plan) {
+// notifies a summary. An empty plan with no failures notifies nothing. It
+// returns the ids it closed and whether it opened anything.
+func (d Deps) apply(repo string, plan reconcile.Plan) (closedIDs []string, openedAny bool) {
 	var opened, failures []string
-	closed := 0
 	for _, id := range plan.Close {
 		if err := d.Herdr.Close(id); err != nil {
 			failures = append(failures, fmt.Sprintf("close %s: %v", id, err))
 			continue
 		}
-		closed++
+		closedIDs = append(closedIDs, id)
 	}
 	for i, path := range plan.Open {
 		focus := d.Config.FocusOnOpen && i == len(plan.Open)-1
@@ -87,13 +87,13 @@ func (d Deps) apply(repo string, plan reconcile.Plan) {
 	for _, f := range failures {
 		d.Log.Print(f)
 	}
-	body := summary(opened, closed, failures)
-	if body == "" {
-		return
+	body := summary(opened, len(closedIDs), failures)
+	if body != "" {
+		if err := d.Herdr.Notify("wtm", body); err != nil {
+			d.Log.Printf("notify: %v", err)
+		}
 	}
-	if err := d.Herdr.Notify("wtm", body); err != nil {
-		d.Log.Printf("notify: %v", err)
-	}
+	return closedIDs, len(opened) > 0
 }
 
 func summary(opened []string, closed int, failures []string) string {

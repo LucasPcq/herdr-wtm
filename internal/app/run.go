@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 
+	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
@@ -56,7 +58,10 @@ func (d Deps) Run(cmd, repo, origin string) error {
 	if err != nil {
 		return d.fail(errors.Join(cmdErr, err))
 	}
-	d.apply(repo, reconcile.Diff(before, after, ws, d.Exists))
+	closed, opened := d.apply(repo, reconcile.Diff(before, after, ws, d.Exists))
+	if !opened && closedOrigin(ws, closed, origin) {
+		d.focusMain(repo, ws)
+	}
 	if cmdErr != nil {
 		return d.fail(fmt.Errorf("wtm %s: %w", cmd, cmdErr))
 	}
@@ -111,4 +116,39 @@ func (d Deps) runShielded(repo string, args []string) error {
 		defer d.Shield()()
 	}
 	return d.Wtm.Run(repo, args...)
+}
+
+// closedOrigin reports whether one of the closed workspaces is the worktree
+// the action was invoked from.
+func closedOrigin(ws []herdr.Workspace, closed []string, origin string) bool {
+	if origin == "" {
+		return false
+	}
+	target := reconcile.Normalize(origin)
+	for _, w := range ws {
+		if w.Worktree != nil && slices.Contains(closed, w.ID) && reconcile.Normalize(w.Worktree.CheckoutPath) == target {
+			return true
+		}
+	}
+	return false
+}
+
+// focusMain brings the user back to the repository's main checkout, opening
+// its workspace when none is open.
+func (d Deps) focusMain(repo string, ws []herdr.Workspace) {
+	target := reconcile.Normalize(repo)
+	var err error
+	if i := slices.IndexFunc(ws, func(w herdr.Workspace) bool {
+		return w.Worktree != nil && !w.Worktree.IsLinked && reconcile.Normalize(w.Worktree.CheckoutPath) == target
+	}); i >= 0 {
+		err = d.Herdr.Focus(ws[i].ID)
+	} else {
+		_, err = d.Herdr.OpenWorktree(repo, repo, true)
+	}
+	if err != nil {
+		d.Log.Printf("focus main checkout: %v", err)
+		if nerr := d.Herdr.Notify("wtm", fmt.Sprintf("could not focus the main checkout: %v", err)); nerr != nil {
+			d.Log.Printf("notify: %v", nerr)
+		}
+	}
 }
