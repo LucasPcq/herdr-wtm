@@ -232,3 +232,22 @@ func TestInstallWorksWithSpaceInRoot(t *testing.T) {
 		t.Fatalf("binary prints %q", got)
 	}
 }
+
+// herdr runs `sh scripts/install.sh` from the plugin root: with a relative
+// path, an exported CDPATH holding a `scripts` directory must not hijack the
+// root detection.
+func TestInstallIgnoresCDPATH(t *testing.T) {
+	srv, _ := releaseServer(t, "")
+	root := pluginRoot(t, "plugin")
+	decoy := t.TempDir()
+	must(t, os.MkdirAll(filepath.Join(decoy, "scripts"), 0o755))
+	cmd := exec.Command("sh", "scripts/install.sh")
+	cmd.Dir = root
+	cmd.Env = []string{"PATH=" + toolbox(t), "HOME=" + t.TempDir(), "HERDR_WTM_RELEASE_BASE_URL=" + srv.URL, "CDPATH=" + decoy}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("%v\n%s", err, out)
+	}
+	if got := runBinary(t, root); got != "prebuilt" {
+		t.Fatalf("binary prints %q", got)
+	}
+}

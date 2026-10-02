@@ -4,7 +4,9 @@
 # when no usable release exists. Run by herdr as the plugin's [[build]] step.
 set -eu
 
-ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# CDPATH= keeps an exported CDPATH from resolving the relative "scripts/.."
+# (herdr runs `sh scripts/install.sh`) to some other directory.
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BASE_URL=${HERDR_WTM_RELEASE_BASE_URL:-https://github.com/LucasPcq/herdr-wtm/releases/download}
 
 log() { printf 'herdr-wtm install: %s\n' "$*" >&2; }
