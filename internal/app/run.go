@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
+	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/rules"
@@ -34,9 +36,15 @@ func (d Deps) Run(p RunParams) error {
 	}
 	cmd := p.Cmd
 	if cmd == domain.CmdMenu {
-		chosen, err := d.Choose(menu.ChooseParams{Title: "wtm · " + filepath.Base(p.Repo), Items: menu.Items(branch)})
+		chosen, err := d.Choose(menu.ChooseParams{Title: filepath.Base(p.Repo), Subtitle: branch, Items: menu.Items(branch)})
 		if err != nil {
 			return d.fail(err)
+		}
+		if d.Relaunch != nil && slices.Contains(domain.WtmCommands, chosen) {
+			if err := d.Relaunch(PopupRequest{Cmd: chosen, Repo: p.Repo, Origin: p.Origin}); err != nil {
+				return d.fail(err)
+			}
+			return nil
 		}
 		cmd = chosen
 	}
@@ -62,10 +70,11 @@ func (d Deps) runCommand(p runCommandParams) error {
 	if p.Cmd == domain.CmdClean && p.Branch != "" {
 		args = append(args, p.Branch)
 	}
-	if err := d.runShielded(wtm.RunParams{Repo: p.Repo, Args: args, CorrelationID: newCorrelationID()}); err != nil {
-		return d.fail(fmt.Errorf("wtm %s: %w", p.Cmd, err))
+	err := d.runShielded(wtm.RunParams{Repo: p.Repo, Args: args, CorrelationID: newCorrelationID()})
+	if err == nil || cancelled(err) {
+		return nil
 	}
-	return nil
+	return d.fail(fmt.Errorf("wtm %s: %w", p.Cmd, err))
 }
 
 // originBranch reads wtm list only when the branch is needed: the menu's
@@ -83,6 +92,9 @@ func (d Deps) originBranch(p RunParams) (string, error) {
 
 func (d Deps) runOpen(repo string) error {
 	path, err := d.Wtm.Resolve(repo)
+	if cancelled(err) {
+		return nil
+	}
 	if err != nil {
 		return d.fail(err)
 	}
@@ -115,3 +127,9 @@ func (d Deps) runShielded(p wtm.RunParams) error {
 }
 
 func newCorrelationID() string { return domain.CorrelationPrefix + rand.Text() }
+
+// cancelled reports a wtm wizard or picker the user backed out of.
+func cancelled(err error) bool {
+	code, ok := execx.ExitCode(err)
+	return ok && code == domain.WtmExitCancelled
+}

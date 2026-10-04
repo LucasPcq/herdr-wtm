@@ -31,7 +31,7 @@ func TestRunMenuRunsChosenCommand(t *testing.T) {
 	if err := d.Run(app.RunParams{Cmd: domain.CmdMenu, Repo: repo, Origin: ""}); err != nil {
 		t.Fatal(err)
 	}
-	if title != "wtm · app" {
+	if title != "app" {
 		t.Fatalf("title %q", title)
 	}
 	assertHas(t, f, "wtm create")
@@ -53,8 +53,8 @@ func TestRunMenuLabelsCleanWithOriginBranch(t *testing.T) {
 	if err := d.Run(app.RunParams{Cmd: domain.CmdMenu, Repo: repo, Origin: "/nx/app.wt/a"}); err != nil {
 		t.Fatal(err)
 	}
-	if seen[3].Label != "Clean this worktree (feat/a)" {
-		t.Fatalf("label %q", seen[3].Label)
+	if seen[3].Label != "Clean this worktree" || seen[3].Detail != "feat/a" {
+		t.Fatalf("clean item %+v", seen[3])
 	}
 	assertHas(t, f, "wtm clean feat/a")
 }

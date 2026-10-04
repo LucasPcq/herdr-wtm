@@ -30,7 +30,7 @@ func TestLoadPartialFileKeepsDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := config.Config{WtmBin: "/opt/bin/wtm", PopupWidth: "90%", PopupHeight: "90%"}
+	want := config.Config{WtmBin: "/opt/bin/wtm"}
 	if cfg != want {
 		t.Fatalf("got %+v", cfg)
 	}

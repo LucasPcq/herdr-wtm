@@ -139,3 +139,21 @@ func TestManifestHasNoPOCAction(t *testing.T) {
 		t.Fatal("manifest must be 0.2.0 without the POC watch action")
 	}
 }
+
+func TestDispatchPopupOpensTheCommandPopup(t *testing.T) {
+	f := &execx.Fake{}
+	e := env(map[string]string{domain.EnvCmd: domain.CmdCreate, domain.EnvRepo: "/nx/app", domain.EnvOrigin: "/nx/app.wt/a"})
+	if err := dispatch(dispatchParams{Deps: deps(f), Args: []string{"popup"}, Getenv: e}); err != nil {
+		t.Fatal(err)
+	}
+	want := "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 100 --height 30 --env HERDR_WTM_CMD=create --env HERDR_WTM_ORIGIN=/nx/app.wt/a --env HERDR_WTM_REPO=/nx/app"
+	if !slices.Contains(f.Lines(), want) {
+		t.Fatalf("lines %v", f.Lines())
+	}
+}
+
+func TestMainWiresRelaunch(t *testing.T) {
+	if newDeps(depsParams{Runner: execx.OS{}, HerdrBin: "herdr", Config: config.Default()}).Relaunch == nil {
+		t.Fatal("Relaunch not wired")
+	}
+}

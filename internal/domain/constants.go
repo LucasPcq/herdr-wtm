@@ -29,6 +29,7 @@ const (
 	SubRun     = "run"
 	SubSync    = "sync"
 	SubWatch   = "watch"
+	SubPopup   = "popup"
 	FlagDetach = "--detach"
 )
 
@@ -61,11 +62,15 @@ const (
 // wtm exit codes the plugin tells apart (wtm docs/guide/integrations.md).
 const (
 	WtmExitUsage        = 2
+	WtmExitCancelled    = 19
 	WtmExitSchemaTooNew = 20
 )
 
 // MinEventsVersion is the `events` contract version the plugin reads.
 const MinEventsVersion = 1
+
+// SurfaceShift is how far the popup's background moves from the terminal's.
+const SurfaceShift = 0.08
 
 // CorrelationPrefix marks the wtm commands the popup starts.
 const CorrelationPrefix = "herdr-wtm:"
@@ -104,9 +109,26 @@ const (
 	WatchLivenessFailures = 3
 )
 
-// Sizes of the popups `launch` opens.
+// Sizes of the popups, in terminal cells or percent of the screen: the menu
+// is compact, wtm's wizards get room, the dashboard nearly the whole screen.
 const (
-	BindPopupWidth  = "72"
-	BindPopupHeight = "14"
-	PopupEntrypoint = "run"
+	BindPopupWidth     = "72"
+	BindPopupHeight    = "14"
+	CommandPopupWidth  = "100"
+	CommandPopupHeight = "30"
+	DashboardPopupSize = "90%"
+	PopupEntrypoint    = "run"
+)
+
+// The menu popup's outer size in cells; its border takes one cell on each side.
+const (
+	MenuPopupCols   = 52
+	MenuPopupRows   = 21
+	PopupBorderSize = 1
+)
+
+// herdr shows one popup at a time: reopening right after the menu closes waits for it.
+const (
+	PopupOpenAttempts = 20
+	PopupRetryDelay   = 100 * time.Millisecond
 )

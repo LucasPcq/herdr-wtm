@@ -37,13 +37,7 @@ func (d Deps) Launch(p LaunchParams) error {
 	if p.Context.Worktree != nil && p.Context.Worktree.IsLinked {
 		origin = p.Context.Worktree.CheckoutPath
 	}
-	return d.Herdr.OpenPopup(herdr.PopupParams{
-		Plugin:     domain.PluginID,
-		Entrypoint: domain.PopupEntrypoint,
-		Width:      d.Config.PopupWidth,
-		Height:     d.Config.PopupHeight,
-		Env:        map[string]string{domain.EnvCmd: p.Cmd, domain.EnvRepo: repo, domain.EnvOrigin: origin},
-	})
+	return d.OpenPopup(PopupRequest{Cmd: p.Cmd, Repo: repo, Origin: origin})
 }
 
 func (d Deps) resolveRepo(hctx domain.HerdrContext) (string, error) {

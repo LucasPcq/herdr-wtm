@@ -1,6 +1,7 @@
 package menu_test
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 
@@ -40,23 +41,44 @@ func send(m menu.Model, msgs ...tea.Msg) (menu.Model, tea.Cmd) {
 }
 
 func newMenu() menu.Model {
-	return menu.New(menu.ChooseParams{Title: "wtm · app", Items: menu.Items("feat/a")})
+	return menu.New(menu.ChooseParams{Title: "app", Subtitle: "feat/a", Items: menu.Items("feat/a")})
 }
 
-func TestItemsOrderAndCleanLabel(t *testing.T) {
+var ansi = regexp.MustCompile(`\x1b\[[0-9;]*m`)
+
+func viewLines(m menu.Model) []string {
+	return strings.Split(ansi.ReplaceAllString(m.View(), ""), "\n")
+}
+
+func lineOf(t *testing.T, m menu.Model, text string) int {
+	t.Helper()
+	for i, l := range viewLines(m) {
+		if strings.Contains(l, text) {
+			return i
+		}
+	}
+	t.Fatalf("%q not in view:\n%s", text, m.View())
+	return -1
+}
+
+func TestItemsOrderGroupsAndCleanLabel(t *testing.T) {
 	items := menu.Items("feat/a")
-	var cmds []string
+	var cmds, groups []string
 	for _, it := range items {
 		cmds = append(cmds, it.Cmd)
+		groups = append(groups, it.Group)
 	}
 	if strings.Join(cmds, ",") != "create,open,checkout,clean,prune,ui,sync" {
 		t.Fatalf("order %v", cmds)
 	}
-	if items[3].Label != "Clean this worktree (feat/a)" {
-		t.Fatalf("clean label %q", items[3].Label)
+	if strings.Join(groups, ",") != "Worktrees,Worktrees,Worktrees,Clean up,Clean up,More,More" {
+		t.Fatalf("groups %v", groups)
 	}
-	if got := menu.Items("")[3].Label; got != "Clean a worktree…" {
-		t.Fatalf("clean label from main %q", got)
+	if items[3].Label != "Clean this worktree" || items[3].Detail != "feat/a" {
+		t.Fatalf("clean item %+v", items[3])
+	}
+	if got := menu.Items("")[3]; got.Label != "Clean a worktree…" || got.Detail != "" {
+		t.Fatalf("clean item from main %+v", got)
 	}
 }
 
@@ -104,17 +126,19 @@ func TestCancelKeys(t *testing.T) {
 }
 
 func TestClickOnItemChoosesIt(t *testing.T) {
-	m, cmd := send(newMenu(), click(menu.ItemsTop+4))
+	m := newMenu()
+	m, cmd := send(m, click(lineOf(t, m, "Prune finished worktrees")))
 	if m.Chosen != "prune" || cmd == nil {
 		t.Fatalf("chosen %q", m.Chosen)
 	}
 }
 
 func TestClickOutsideItemsDoesNothing(t *testing.T) {
-	for _, y := range []int{0, 1, menu.ItemsTop + 7, menu.ItemsTop + 9, 40} {
-		m, cmd := send(newMenu(), click(y))
-		if m.Chosen != "" || m.Quit || cmd != nil {
-			t.Fatalf("y=%d: chosen %q", y, m.Chosen)
+	m := newMenu()
+	for _, y := range []int{0, lineOf(t, m, "app"), lineOf(t, m, "CLEAN UP"), lineOf(t, m, "esc close"), 40} {
+		got, cmd := send(m, click(y))
+		if got.Chosen != "" || got.Quit || cmd != nil {
+			t.Fatalf("y=%d: chosen %q", y, got.Chosen)
 		}
 	}
 }
@@ -128,15 +152,46 @@ func TestWheelMovesSelection(t *testing.T) {
 	}
 }
 
-func TestViewLayoutMatchesClickRows(t *testing.T) {
-	lines := strings.Split(newMenu().View(), "\n")
-	if !strings.Contains(lines[0], "wtm · app") {
-		t.Fatalf("title line %q", lines[0])
+func TestViewGroupsItemsUnderHeaders(t *testing.T) {
+	m := newMenu()
+	order := []string{"app", "feat/a", "WORKTREES", "New worktree", "Checkout a pull request", "CLEAN UP", "Clean this worktree", "Prune finished worktrees", "MORE", "Dashboard", "Sync workspaces", "esc close"}
+	prev := -1
+	for _, text := range order {
+		at := lineOf(t, m, text)
+		if at < prev {
+			t.Fatalf("%q at line %d, before line %d", text, at, prev)
+		}
+		prev = at
 	}
-	if !strings.Contains(lines[menu.ItemsTop], "New worktree") || !strings.Contains(lines[menu.ItemsTop], "▸") {
-		t.Fatalf("first item line %q", lines[menu.ItemsTop])
+}
+
+func TestViewMarksSelectionAndNumbersItems(t *testing.T) {
+	lines := viewLines(newMenu())
+	first := lines[lineOf(t, newMenu(), "New worktree")]
+	if !strings.Contains(first, "▌") || !strings.HasSuffix(strings.TrimRight(first, " "), "1") {
+		t.Fatalf("selected row %q", first)
 	}
-	if !strings.Contains(lines[menu.ItemsTop+6], "Sync workspaces") {
-		t.Fatalf("last item line %q", lines[menu.ItemsTop+6])
+	other := lines[lineOf(t, newMenu(), "Dashboard")]
+	if strings.Contains(other, "▌") || !strings.HasSuffix(strings.TrimRight(other, " "), "6") {
+		t.Fatalf("row %q", other)
+	}
+}
+
+func TestViewFitsTheMenuPopup(t *testing.T) {
+	lines := viewLines(newMenu())
+	if len(lines) > menu.Height {
+		t.Fatalf("%d lines, popup holds %d", len(lines), menu.Height)
+	}
+	for _, l := range lines {
+		if n := len([]rune(l)); n > menu.Width {
+			t.Fatalf("%d columns, popup holds %d: %q", n, menu.Width, l)
+		}
+	}
+}
+
+func TestFailureNamesTheErrorAndHowToClose(t *testing.T) {
+	got := ansi.ReplaceAllString(menu.Failure("wtm prune: exit status 1"), "")
+	if !strings.Contains(got, "✗ wtm prune: exit status 1") || !strings.Contains(got, "Press Enter to close") {
+		t.Fatalf("failure %q", got)
 	}
 }

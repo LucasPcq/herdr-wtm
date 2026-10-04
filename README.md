@@ -81,8 +81,8 @@ Optional, in `$(herdr plugin config-dir lucaspcq.wtm)/config.toml`:
 
 ```toml
 wtm_bin = "wtm"        # path or name on PATH
-popup_width = "90%"
-popup_height = "90%"
+popup_width = "100"   # size of the command popups (wizards, dashboard)
+popup_height = "30"   # unset: each command's own size
 ```
 
 Details in [Configuration](docs/guide/configuration.md).

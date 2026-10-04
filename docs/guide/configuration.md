@@ -7,10 +7,10 @@ Optional, in `$(herdr plugin config-dir lucaspcq.wtm)/config.toml`:
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `wtm_bin` | `"wtm"` | the wtm binary: a name on `PATH` or an absolute path (handy to try a local build) |
-| `popup_width` | `"90%"` | popup width, as herdr takes it (`"90%"`, `"120"`) |
-| `popup_height` | `"90%"` | popup height |
+| `popup_width` | each command's own | width of the popup a command runs in, as herdr takes it (`"120"` cells, `"80%"` of the screen) |
+| `popup_height` | each command's own | its height |
 
-An empty value is refused with a notification; an unknown key is ignored. The file is read each time the plugin runs, so a change applies to the next popup; the watcher reads it once when it starts, so restart herdr for it to apply there too.
+Without `popup_width` and `popup_height`, the menu opens compact, wtm's wizards and pickers at 100×30 cells, and the dashboard at 90% of the screen; set them to give every command popup one size of your own (the menu keeps its own). An empty `wtm_bin` is refused with a notification; an unknown key is ignored. The file is read each time the plugin runs, so a change applies to the next popup; the watcher reads it once when it starts, so restart herdr for it to apply there too.
 
 ## The menu key
 

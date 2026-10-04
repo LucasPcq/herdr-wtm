@@ -21,11 +21,17 @@ Workspaces follow your worktrees wherever they change, on top of wtm 0.29's even
 ### Added
 
 - **A notification** when a new worktree's `on_create` hooks fail, naming the hook and its exit code.
+- **The menu** opens as a compact, grouped list on a background of its own, and each command reopens the popup at its size: room for wizards, nearly the whole screen for the dashboard. → [Configuration](docs/guide/configuration.md)
 
 ### Changed
 
 - **Sync workspaces** reads wtm's current state and starts the watcher if it stopped.
 - **Startup** starts the watcher instead of syncing every repository once. → [Migrating to 0.2](docs/guide/migrating-to-0.2.md#sync-at-startup-is-gone)
+- **`popup_width` / `popup_height`** size the command popups only, and default to each command's own size instead of 90%.
+
+### Fixed
+
+- **Backing out of a wtm wizard or picker** closes the popup instead of reporting `exit status 19`.
 
 ## [0.1.0] - 2026-10-02
 

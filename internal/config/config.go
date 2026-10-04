@@ -14,7 +14,7 @@ import (
 )
 
 // Config is the user-editable plugin configuration. Unknown keys, such as
-// 0.1's focus_on_open, are ignored.
+// 0.1's focus_on_open, are ignored; an empty popup size means the command's own.
 type Config struct {
 	WtmBin      string `toml:"wtm_bin"`
 	PopupWidth  string `toml:"popup_width"`
@@ -22,7 +22,7 @@ type Config struct {
 }
 
 func Default() Config {
-	return Config{WtmBin: domain.DefaultWtmBin, PopupWidth: "90%", PopupHeight: "90%"}
+	return Config{WtmBin: domain.DefaultWtmBin}
 }
 
 // Load reads dir/config.toml over the defaults. A missing file is not an error.
@@ -46,12 +46,8 @@ func Load(dir string) (Config, error) {
 }
 
 func validate(cfg Config) error {
-	for _, field := range []struct{ key, value string }{
-		{"wtm_bin", cfg.WtmBin}, {"popup_width", cfg.PopupWidth}, {"popup_height", cfg.PopupHeight},
-	} {
-		if strings.TrimSpace(field.value) == "" {
-			return fmt.Errorf("%s must not be empty", field.key)
-		}
+	if strings.TrimSpace(cfg.WtmBin) == "" {
+		return errors.New("wtm_bin must not be empty")
 	}
 	return nil
 }

@@ -167,3 +167,13 @@ func TestWorkspacesReadFocus(t *testing.T) {
 		t.Fatalf("ws %+v err %v", ws, err)
 	}
 }
+
+func TestOpenPopupReportsBusy(t *testing.T) {
+	f := &execx.Fake{Handler: func(execx.Call) ([]byte, error) {
+		return nil, errors.New(`herdr plugin pane open: exit status 1: {"id":"cli:plugin","error":{"code":"ui_busy","message":"a popup pane is already open"}}`)
+	}}
+	err := herdr.Client{Runner: f, Bin: "herdr"}.OpenPopup(herdr.PopupParams{Plugin: "p", Entrypoint: "run"})
+	if !errors.Is(err, domain.ErrHerdrBusy) {
+		t.Fatalf("err %v", err)
+	}
+}

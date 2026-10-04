@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
@@ -123,10 +124,14 @@ func (c Client) OpenPopup(p PopupParams) error {
 }
 
 func (c Client) run(args ...string) error {
-	if _, err := c.output(args...); err != nil {
-		return fmt.Errorf("herdr %s: %w", args[0], err)
+	_, err := c.output(args...)
+	if err == nil {
+		return nil
 	}
-	return nil
+	if strings.Contains(err.Error(), `"code":"ui_busy"`) {
+		return fmt.Errorf("herdr %s: %w", args[0], domain.ErrHerdrBusy)
+	}
+	return fmt.Errorf("herdr %s: %w", args[0], err)
 }
 
 // DefaultConfig returns `herdr --default-config`, the documented defaults.

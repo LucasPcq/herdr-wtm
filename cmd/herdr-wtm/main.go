@@ -2,6 +2,7 @@
 //
 //	herdr-wtm launch <menu|bind|create|checkout|open|clean|prune|ui>   herdr action
 //	herdr-wtm run                                                     popup entrypoint
+//	herdr-wtm popup                                                   reopens the popup for a menu choice
 //	herdr-wtm sync                                                    herdr action
 //	herdr-wtm watch [--detach]                                        startup hook
 package main
@@ -66,6 +67,7 @@ func newDeps(p depsParams) app.Deps {
 		Choose:       menu.Choose,
 		Shield:       shieldSignals,
 		StartWatcher: detachWatch,
+		Relaunch:     detachPopup,
 		HerdrConfig:  herdrConfigPath(),
 	}
 }
@@ -76,7 +78,7 @@ type dispatchParams struct {
 	Getenv func(string) string
 }
 
-const usage = "usage: herdr-wtm launch <cmd> | run | sync | watch [--detach]"
+const usage = "usage: herdr-wtm launch <cmd> | run | popup | sync | watch [--detach]"
 
 func dispatch(p dispatchParams) error {
 	if len(p.Args) == 0 {
@@ -86,10 +88,13 @@ func dispatch(p dispatchParams) error {
 	case domain.SubLaunch:
 		return launch(p)
 	case domain.SubRun:
+		paintSurface()
 		if p.Getenv(domain.EnvCmd) == domain.CmdBind {
 			return p.Deps.Bind()
 		}
 		return p.Deps.Run(app.RunParams{Cmd: p.Getenv(domain.EnvCmd), Repo: p.Getenv(domain.EnvRepo), Origin: p.Getenv(domain.EnvOrigin)})
+	case domain.SubPopup:
+		return p.Deps.OpenPopup(app.PopupRequest{Cmd: p.Getenv(domain.EnvCmd), Repo: p.Getenv(domain.EnvRepo), Origin: p.Getenv(domain.EnvOrigin)})
 	case domain.SubSync:
 		return syncWorkspaces(p)
 	case domain.SubWatch:

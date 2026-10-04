@@ -37,13 +37,18 @@ type Deps struct {
 	HerdrConfig string
 	// StartWatcher makes sure a watcher runs; nil does nothing.
 	StartWatcher func() error
+	// Relaunch reopens the popup for a command chosen in the menu, from a
+	// process that outlives the menu's popup; nil runs the command in place.
+	Relaunch func(PopupRequest) error
+	// PopupRetryDelay spaces OpenPopup's attempts; zero means domain.PopupRetryDelay.
+	PopupRetryDelay time.Duration
 	// SnapshotTimeout bounds Sync's wait for a snapshot; zero means domain.SnapshotTimeout.
 	SnapshotTimeout time.Duration
 }
 
 // fail shows err in the popup and waits for Enter so the user can read it.
 func (d Deps) fail(err error) error {
-	fmt.Fprintf(d.Out, "\nherdr-wtm: %v\n\nPress Enter to close.", err)
+	fmt.Fprint(d.Out, menu.Failure(err.Error()))
 	_, _ = bufio.NewReader(d.In).ReadString('\n')
 	return err
 }

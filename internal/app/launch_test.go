@@ -20,7 +20,7 @@ func TestLaunchFromLinkedWorktreePassesOrigin(t *testing.T) {
 	if err := d.Launch(app.LaunchParams{Cmd: "clean", Context: ctx}); err != nil {
 		t.Fatal(err)
 	}
-	want := "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 90% --height 90% --env HERDR_WTM_CMD=clean --env HERDR_WTM_ORIGIN=/nx/app.wt/a --env HERDR_WTM_REPO=/nx/app"
+	want := "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 100 --height 30 --env HERDR_WTM_CMD=clean --env HERDR_WTM_ORIGIN=/nx/app.wt/a --env HERDR_WTM_REPO=/nx/app"
 	if len(f.Calls) != 1 || f.Calls[0].Line() != want {
 		t.Fatalf("lines %v", f.Lines())
 	}
@@ -32,7 +32,7 @@ func TestLaunchFromMainCheckoutHasNoOrigin(t *testing.T) {
 	if err := d.Launch(app.LaunchParams{Cmd: "create", Context: ctx}); err != nil {
 		t.Fatal(err)
 	}
-	want := "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 90% --height 90% --env HERDR_WTM_CMD=create --env HERDR_WTM_REPO=/nx/app"
+	want := "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 100 --height 30 --env HERDR_WTM_CMD=create --env HERDR_WTM_REPO=/nx/app"
 	if f.Calls[0].Line() != want {
 		t.Fatalf("got %q", f.Calls[0].Line())
 	}
@@ -86,7 +86,7 @@ func TestLaunchMenu(t *testing.T) {
 	if err := d.Launch(app.LaunchParams{Cmd: "menu", Context: ctx}); err != nil {
 		t.Fatal(err)
 	}
-	assertHas(t, f, "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 90% --height 90% --env HERDR_WTM_CMD=menu --env HERDR_WTM_REPO=/nx/app")
+	assertHas(t, f, "herdr plugin pane open --plugin lucaspcq.wtm --entrypoint run --placement popup --width 52 --height 21 --env HERDR_WTM_CMD=menu --env HERDR_WTM_REPO=/nx/app")
 }
 
 func TestLaunchStartsWatcher(t *testing.T) {
