@@ -67,7 +67,6 @@ Then press it from any workspace of a wtm repository:
   <img alt="The menu key opens a compact wtm menu; New worktree reopens the popup for the create wizard, and the new worktree opens as the focused workspace" src="docs/assets/popup.gif" width="800">
 </p>
 
-
 | # | Entry | What happens |
 |---|---|---|
 | 1 | New worktree | `wtm create`; the new worktree opens as a focused workspace |
