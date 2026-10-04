@@ -11,6 +11,17 @@ herdr plugin log list --plugin lucaspcq.wtm
 
 Lines starting with `watch:` are the watcher's.
 
+## No notification shows up
+
+The plugin reports through herdr's notifications: workspaces opened or closed, a failed `on_create` hook, a wtm too old. herdr does not show them until you choose how to deliver them, in `~/.config/herdr/config.toml`:
+
+```toml
+[ui.toast]
+delivery = "herdr"   # in-app toasts; "terminal" or "system" for desktop notifications
+```
+
+Then `herdr server reload-config`. Failures are also written to the log, whatever the setting.
+
 ## "herdr-wtm needs wtm 0.29 or later"
 
 The watcher reads `wtm events` and `wtm version --output json`, both new in wtm 0.29. Run `wtm upgrade` (or `brew upgrade wtm`), then *Sync workspaces* to start the watcher again. If you point `wtm_bin` at a specific binary, check `"$wtm_bin" version --output json` reports `"events": 1`.
