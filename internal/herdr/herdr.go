@@ -1,4 +1,4 @@
-// Package herdr drives the herdr CLI.
+// Package herdr drives the herdr CLI. herdr's argv is spelled only here.
 package herdr
 
 import (
@@ -66,13 +66,19 @@ func (c Client) PaneCWDs() ([]string, error) {
 	return cwds, nil
 }
 
-// OpenWorktree opens the worktree at path as a workspace of repo and returns its id.
-func (c Client) OpenWorktree(repo, path string, focus bool) (string, error) {
+type OpenParams struct {
+	Repo  string
+	Path  string
+	Focus bool
+}
+
+// OpenWorktree opens the worktree at Path as a workspace of Repo and returns its id.
+func (c Client) OpenWorktree(p OpenParams) (string, error) {
 	focusFlag := "--no-focus"
-	if focus {
+	if p.Focus {
 		focusFlag = "--focus"
 	}
-	out, err := c.output("worktree", "open", "--cwd", repo, "--path", path, focusFlag)
+	out, err := c.output("worktree", "open", "--cwd", p.Repo, "--path", p.Path, focusFlag)
 	if err != nil {
 		return "", fmt.Errorf("herdr worktree open: %w", err)
 	}
@@ -95,8 +101,8 @@ func (c Client) Close(id string) error {
 	return c.run("workspace", "close", id)
 }
 
-func (c Client) Notify(title, body string) error {
-	return c.run("notification", "show", title, "--body", body)
+func (c Client) Notify(body string) error {
+	return c.run("notification", "show", domain.NotifyTitle, "--body", body)
 }
 
 func (c Client) OpenPopup(p PopupParams) error {

@@ -61,7 +61,7 @@ func (d Deps) apply(repo string, plan reconcile.Plan) (closedIDs []string, opene
 	}
 	for i, path := range plan.Open {
 		focus := d.Config.FocusOnOpen && i == len(plan.Open)-1
-		if _, err := d.Herdr.OpenWorktree(repo, path, focus); err != nil {
+		if _, err := d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: path, Focus: focus}); err != nil {
 			failures = append(failures, fmt.Sprintf("open %s: %v", filepath.Base(path), err))
 			continue
 		}
@@ -72,9 +72,7 @@ func (d Deps) apply(repo string, plan reconcile.Plan) (closedIDs []string, opene
 	}
 	body := summary(opened, len(closedIDs), failures)
 	if body != "" {
-		if err := d.Herdr.Notify("wtm", body); err != nil {
-			d.Log.Printf("notify: %v", err)
-		}
+		d.notify(body)
 	}
 	return closedIDs, len(opened) > 0
 }
@@ -91,4 +89,11 @@ func summary(opened []string, closed int, failures []string) string {
 		parts = append(parts, "failed: "+strings.Join(failures, "; "))
 	}
 	return strings.Join(parts, " · ")
+}
+
+// notify shows body as a herdr notification; a failure is only logged.
+func (d Deps) notify(body string) {
+	if err := d.Herdr.Notify(body); err != nil {
+		d.Log.Printf("notify: %v", err)
+	}
 }

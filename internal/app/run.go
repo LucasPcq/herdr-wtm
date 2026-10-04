@@ -7,9 +7,11 @@ import (
 	"slices"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
+	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/rules"
+	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 // Run is the popup entrypoint: run the wtm command, then sync herdr workspaces
@@ -89,7 +91,7 @@ func (d Deps) runOpen(repo string) error {
 			return nil
 		}
 	}
-	if _, err := d.Herdr.OpenWorktree(repo, path, true); err != nil {
+	if _, err := d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: path, Focus: true}); err != nil {
 		return d.fail(err)
 	}
 	return nil
@@ -101,7 +103,7 @@ func (d Deps) runShielded(repo string, args []string) error {
 	if d.Shield != nil {
 		defer d.Shield()()
 	}
-	return d.Wtm.Run(repo, args...)
+	return d.Wtm.Run(wtm.RunParams{Repo: repo, Args: args})
 }
 
 // closedOrigin reports whether one of the closed workspaces is the worktree
@@ -129,12 +131,10 @@ func (d Deps) focusMain(repo string, ws []domain.Workspace) {
 	}); i >= 0 {
 		err = d.Herdr.Focus(ws[i].ID)
 	} else {
-		_, err = d.Herdr.OpenWorktree(repo, repo, true)
+		_, err = d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: repo, Focus: true})
 	}
 	if err != nil {
 		d.Log.Printf("focus main checkout: %v", err)
-		if nerr := d.Herdr.Notify("wtm", fmt.Sprintf("could not focus the main checkout: %v", err)); nerr != nil {
-			d.Log.Printf("notify: %v", nerr)
-		}
+		d.notify(fmt.Sprintf("could not focus the main checkout: %v", err))
 	}
 }

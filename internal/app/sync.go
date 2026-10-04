@@ -43,9 +43,7 @@ func (d Deps) syncRepo(repo string) error {
 	}
 	plan := d.closeStale([]string{repo}, ws)
 	if plan.Empty() {
-		if err := d.Herdr.Notify("wtm", "workspaces already in sync"); err != nil {
-			d.Log.Printf("notify: %v", err)
-		}
+		d.notify("workspaces already in sync")
 		return nil
 	}
 	d.apply(repo, plan)

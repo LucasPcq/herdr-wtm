@@ -8,8 +8,10 @@ import (
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/gitx"
+	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/rules"
+	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 // POC (LUC-233): Watch keeps herdr workspaces in sync with `wtm events`.
@@ -54,12 +56,12 @@ func (d Deps) streamRepo(ctx context.Context, repo string, mu *sync.Mutex) {
 	backoff := time.Second
 	for ctx.Err() == nil {
 		ready := false
-		err := d.Wtm.Events(ctx, repo, func(ev domain.Event) {
+		err := d.Wtm.Events(ctx, wtm.EventsParams{Repo: repo, OnEvent: func(ev domain.Event) {
 			mu.Lock()
 			defer mu.Unlock()
 			ready = ready || ev.Type == "ready"
 			d.handleEvent(repo, ev)
-		})
+		}})
 		if ctx.Err() != nil {
 			return
 		}
@@ -104,7 +106,7 @@ func (d Deps) handleEvent(repo string, ev domain.Event) {
 			return
 		}
 		// Never steal focus: the change may come from an agent in another pane.
-		if _, err := d.Herdr.OpenWorktree(repo, ev.Worktree.Path, false); err != nil {
+		if _, err := d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: ev.Worktree.Path, Focus: false}); err != nil {
 			d.Log.Printf("watch: open %s: %v", ev.Worktree.Path, err)
 		}
 	case "worktree.removed":

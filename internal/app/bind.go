@@ -61,9 +61,7 @@ func (d Deps) Bind() error {
 	}
 	msg := "wtm menu bound to " + key
 	fmt.Fprintln(d.Out, msg)
-	if err := d.Herdr.Notify("wtm", msg); err != nil {
-		d.Log.Printf("notify: %v", err)
-	}
+	d.notify(msg)
 	return nil
 }
 

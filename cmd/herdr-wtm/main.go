@@ -38,7 +38,7 @@ func main() {
 	cfg, err := config.Load(os.Getenv(domain.EnvPluginConfig))
 	if err != nil {
 		logger.Print(err)
-		_ = hc.Notify("wtm", err.Error())
+		_ = hc.Notify(err.Error())
 		os.Exit(domain.ExitCodeError)
 	}
 
@@ -83,7 +83,7 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 			err = d.Launch(args[1], ctx)
 		}
 		if err != nil {
-			_ = d.Herdr.Notify("wtm", err.Error())
+			_ = d.Herdr.Notify(err.Error())
 		}
 		return err
 	case "run":
@@ -98,7 +98,7 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 			err = d.Sync(all, ctx)
 		}
 		if err != nil && !all {
-			_ = d.Herdr.Notify("wtm", err.Error())
+			_ = d.Herdr.Notify(err.Error())
 		}
 		return err
 	case "watch":
