@@ -62,7 +62,10 @@ func (d Deps) Run(cmd, repo, origin string) error {
 	}
 	closed, opened := d.apply(repo, reconcile.Diff(reconcile.DiffParams{Before: before, After: after, Workspaces: ws, FS: d.FS}))
 	if !opened && d.closedOrigin(ws, closed, origin) {
-		d.focusMain(repo, ws)
+		if err := d.focusMain(repo, ws); err != nil {
+			d.Log.Printf("focus main checkout: %v", err)
+			d.notify(fmt.Sprintf("could not focus the main checkout: %v", err))
+		}
 	}
 	if cmdErr != nil {
 		return d.fail(fmt.Errorf("wtm %s: %w", cmd, cmdErr))
@@ -119,22 +122,4 @@ func (d Deps) closedOrigin(ws []domain.Workspace, closed []string, origin string
 		}
 	}
 	return false
-}
-
-// focusMain brings the user back to the repository's main checkout, opening
-// its workspace when none is open.
-func (d Deps) focusMain(repo string, ws []domain.Workspace) {
-	target := d.FS.Normalize(repo)
-	var err error
-	if i := slices.IndexFunc(ws, func(w domain.Workspace) bool {
-		return w.Worktree != nil && !w.Worktree.IsLinked && d.FS.Normalize(w.Worktree.CheckoutPath) == target
-	}); i >= 0 {
-		err = d.Herdr.Focus(ws[i].ID)
-	} else {
-		_, err = d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: repo, Focus: true})
-	}
-	if err != nil {
-		d.Log.Printf("focus main checkout: %v", err)
-		d.notify(fmt.Sprintf("could not focus the main checkout: %v", err))
-	}
 }

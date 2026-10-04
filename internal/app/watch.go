@@ -2,173 +2,110 @@ package app
 
 import (
 	"context"
-	"slices"
-	"sync"
+	"fmt"
 	"time"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
-	"github.com/LucasPcq/herdr-wtm/internal/gitx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
-	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
-	"github.com/LucasPcq/herdr-wtm/internal/rules"
+	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
-// POC (LUC-233): Watch keeps herdr workspaces in sync with `wtm events`.
-// herdr runs no plugin daemon, so main detaches this process at startup.
-
-// watchTick is how often Watch checks herdr is still up and looks for repos
-// it does not stream yet.
-const watchTick = 5 * time.Second
-
-// Watch streams `wtm events` for every repository herdr shows a workspace of,
-// and applies each change to the workspaces. It returns when herdr stops
-// answering or ctx is cancelled.
+// Watch keeps herdr's workspaces in step with the worktrees of every
+// repository wtm knows, until herdr stops answering or ctx ends.
 func (d Deps) Watch(ctx context.Context) error {
+	if err := d.CheckWtm(); err != nil {
+		d.notify(err.Error())
+		return err
+	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	var mu sync.Mutex // one herdr reconciliation at a time across repos
-	watched := map[string]bool{}
-	for {
-		ws, err := d.Herdr.Workspaces()
-		if err != nil {
-			d.Log.Printf("watch: herdr is gone, stopping: %v", err)
-			return nil
-		}
-		for _, repo := range d.watchRepos(ws, watched) {
-			watched[repo] = true
-			d.Log.Printf("watch: streaming %s", repo)
-			go d.streamRepo(ctx, repo, &mu)
-		}
-		select {
-		case <-ctx.Done():
-			return nil
-		case <-time.After(watchTick):
-		}
-	}
+	go d.cancelWhenHerdrGone(ctx, cancel)
+	w := NewWatcher(WatcherParams{Deps: d, Quiet: domain.NotifyQuietWindow})
+	defer w.Flush()
+	return d.stream(ctx, w)
 }
 
-// streamRepo reads repo's event stream, restarting it with a backoff when it
-// ends: a fresh stream opens on a snapshot, so nothing is lost but latency. A
-// stream that fails before its first ready (not a wtm repository, a wtm
-// without `events`) is not retried.
-func (d Deps) streamRepo(ctx context.Context, repo string, mu *sync.Mutex) {
-	backoff := time.Second
-	for ctx.Err() == nil {
+// CheckWtm refuses a wtm that predates the event stream.
+func (d Deps) CheckWtm() error {
+	contracts, err := d.Wtm.Contracts()
+	if code, ok := execx.ExitCode(err); ok && code == domain.WtmExitUsage {
+		return domain.ErrWtmTooOld
+	}
+	if err != nil {
+		return err
+	}
+	if contracts.Events < domain.MinEventsVersion {
+		return domain.ErrWtmTooOld
+	}
+	return nil
+}
+
+// stream reads the global stream, reopening it with a backoff: a fresh stream
+// opens on snapshots, so a restart loses nothing but latency.
+func (d Deps) stream(ctx context.Context, w *Watcher) error {
+	backoff := domain.StreamBackoffMin
+	for {
 		ready := false
-		err := d.Wtm.Events(ctx, wtm.EventsParams{Repo: repo, OnEvent: func(ev domain.Event) {
-			mu.Lock()
-			defer mu.Unlock()
-			ready = ready || ev.Type == "ready"
-			d.handleEvent(repo, ev)
+		err := d.Wtm.Events(ctx, wtm.EventsParams{OnEvent: func(ev domain.Event) {
+			ready = ready || ev.Type == domain.EventReady
+			w.Handle(ev)
 		}})
 		if ctx.Err() != nil {
-			return
+			return nil
 		}
-		if !ready {
-			d.Log.Printf("watch: %s not watched: %v", repo, err)
-			return
+		if stop := streamStop(err); stop != nil {
+			d.Log.Printf("watch: %v", err)
+			d.notify(stop.Error())
+			return stop
 		}
-		d.Log.Printf("watch: %s stream ended (%v), retrying in %s", repo, err, backoff)
+		if ready {
+			backoff = domain.StreamBackoffMin
+		}
+		d.Log.Printf("watch: stream ended (%v), retrying in %s", err, backoff)
+		if !sleep(ctx, backoff) {
+			return nil
+		}
+		backoff = min(backoff*2, domain.StreamBackoffMax)
+	}
+}
+
+// streamStop returns why a stream must not be retried: no retry changes its exit code.
+func streamStop(err error) error {
+	code, ok := execx.ExitCode(err)
+	if !ok {
+		return nil
+	}
+	switch code {
+	case domain.WtmExitSchemaTooNew:
+		return domain.ErrWtmSchemaTooNew
+	case domain.WtmExitUsage:
+		return fmt.Errorf("wtm events refused its arguments: %w", err)
+	}
+	return nil
+}
+
+func (d Deps) cancelWhenHerdrGone(ctx context.Context, cancel context.CancelFunc) {
+	tick := time.NewTicker(domain.WatchLivenessTick)
+	defer tick.Stop()
+	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-time.After(backoff):
-		}
-		backoff = min(backoff*2, 30*time.Second)
-	}
-}
-
-func (d Deps) handleEvent(repo string, ev domain.Event) {
-	d.Log.Printf("watch: %s %s", ev.Type, eventPath(ev))
-	switch ev.Type {
-	case "snapshot":
-		ws, err := d.Herdr.Workspaces()
-		if err != nil {
-			d.Log.Printf("watch: %v", err)
-			return
-		}
-		current := make([]domain.Worktree, 0, len(ev.Worktrees))
-		for _, w := range ev.Worktrees {
-			current = append(current, domain.Worktree{Branch: w.Branch, Path: w.Path, IsParent: w.IsMain})
-		}
-		d.apply(repo, reconcile.Plan{Close: rules.Stale(rules.StaleParams{RepoRoot: repo, Current: worktreePaths(current), Workspaces: ws, FS: d.FS})})
-	case "worktree.created":
-		if ev.Worktree == nil || ev.Worktree.IsMain {
-			return
-		}
-		ws, err := d.Herdr.Workspaces()
-		if err != nil {
-			d.Log.Printf("watch: %v", err)
-			return
-		}
-		if workspaceID(d, ws, ev.Worktree.Path) != "" {
-			return
-		}
-		// Never steal focus: the change may come from an agent in another pane.
-		if _, err := d.Herdr.OpenWorktree(herdr.OpenParams{Repo: repo, Path: ev.Worktree.Path, Focus: false}); err != nil {
-			d.Log.Printf("watch: open %s: %v", ev.Worktree.Path, err)
-		}
-	case "worktree.removed":
-		if ev.Worktree == nil || d.FS.Exists(ev.Worktree.Path) {
-			return
-		}
-		ws, err := d.Herdr.Workspaces()
-		if err != nil {
-			d.Log.Printf("watch: %v", err)
-			return
-		}
-		if id := workspaceID(d, ws, ev.Worktree.Path); id != "" && isLinked(ws, id) {
-			d.apply(repo, reconcile.Plan{Close: []string{id}})
+		case <-tick.C:
+			if _, err := d.Herdr.Workspaces(); err != nil {
+				d.Log.Printf("watch: herdr is gone, stopping: %v", err)
+				cancel()
+				return
+			}
 		}
 	}
 }
 
-// watchRepos returns the repositories not yet in watched: those herdr reports
-// on workspaces, plus those holding a pane's cwd, since herdr only reports a
-// worktree for workspaces it opened as one. Paths seen are remembered in
-// watched, so a pane outside any repository costs one git call.
-func (d Deps) watchRepos(ws []domain.Workspace, watched map[string]bool) []string {
-	var repos []string
-	add := func(repo string) {
-		if !watched[repo] && !slices.Contains(repos, repo) {
-			repos = append(repos, repo)
-		}
+func sleep(ctx context.Context, d time.Duration) bool {
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
 	}
-	for _, w := range ws {
-		if w.Worktree != nil && w.Worktree.RepoRoot != "" {
-			add(w.Worktree.RepoRoot)
-		}
-	}
-	cwds, err := d.Herdr.PaneCWDs()
-	if err != nil {
-		d.Log.Printf("watch: %v", err)
-	}
-	for _, cwd := range cwds {
-		if watched["cwd:"+cwd] {
-			continue
-		}
-		watched["cwd:"+cwd] = true
-		if repo, err := gitx.RepoRoot(d.Git, cwd); err == nil {
-			add(repo)
-		}
-	}
-	return repos
-}
-
-func isLinked(ws []domain.Workspace, id string) bool {
-	i := slices.IndexFunc(ws, func(w domain.Workspace) bool { return w.ID == id })
-	return i >= 0 && ws[i].Worktree != nil && ws[i].Worktree.IsLinked
-}
-
-func eventPath(ev domain.Event) string {
-	if ev.Worktree != nil {
-		return ev.Worktree.Path
-	}
-	return ev.Repo.Root
-}
-
-func workspaceID(d Deps, ws []domain.Workspace, path string) string {
-	w, _ := rules.WorkspaceAt(rules.WorkspaceAtParams{Workspaces: ws, Path: path, FS: d.FS})
-	return w.ID
 }

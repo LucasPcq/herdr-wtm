@@ -13,7 +13,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 )
 
-// POC (LUC-233): herdr's [[startup]] hooks are one-shot, so `watch --detach`
+// herdr's [[startup]] hooks are one-shot, so `watch --detach`
 // re-executes herdr-wtm as `watch` in its own session and returns at once.
 
 func detachWatch() error {

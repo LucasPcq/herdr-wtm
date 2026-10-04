@@ -96,3 +96,61 @@ func assertNoPrefix(t *testing.T, f *execx.Fake, prefix string) {
 func wtm0(path string) domain.Worktree {
 	return domain.Worktree{Branch: "main", Path: path, IsParent: true}
 }
+
+var appRepo = domain.EventRepo{Root: repo, CommonDir: repo + "/.git"}
+
+func snapshotEv(paths ...string) domain.Event {
+	wts := []domain.EventWorktree{{Branch: "main", Path: repo, IsMain: true}}
+	for _, p := range paths {
+		wts = append(wts, domain.EventWorktree{Branch: filepath.Base(p), Path: p})
+	}
+	return domain.Event{V: 1, Type: domain.EventSnapshot, Repo: appRepo, Worktrees: wts}
+}
+
+func wtEv(typ, path, correlation string) domain.Event {
+	return domain.Event{V: 1, Type: typ, Repo: appRepo, CorrelationID: correlation, Worktree: &domain.EventWorktree{Branch: filepath.Base(path), Path: path}}
+}
+
+func eventLines(evs ...domain.Event) []byte {
+	var b bytes.Buffer
+	for _, ev := range evs {
+		data, _ := json.Marshal(ev)
+		b.Write(append(data, '\n'))
+	}
+	return b.Bytes()
+}
+
+func panesJSON(cwds ...string) []byte {
+	panes := make([]map[string]string, len(cwds))
+	for i, c := range cwds {
+		panes[i] = map[string]string{"cwd": c}
+	}
+	data, _ := json.Marshal(map[string]any{"result": map[string]any{"panes": panes}})
+	return data
+}
+
+// herdrState answers herdr's list calls with ws and cwds, and every open with w9.
+func herdrState(ws []domain.Workspace, cwds ...string) func(execx.Call) ([]byte, error) {
+	return func(c execx.Call) ([]byte, error) {
+		switch {
+		case c.Line() == "herdr workspace list":
+			return workspacesJSON(ws...), nil
+		case c.Line() == "herdr pane list":
+			return panesJSON(cwds...), nil
+		case strings.HasPrefix(c.Line(), "herdr worktree open"):
+			return openedJSON("w9"), nil
+		}
+		return nil, nil
+	}
+}
+
+func indexOf(t *testing.T, f *execx.Fake, line string) int {
+	t.Helper()
+	i := slices.Index(f.Lines(), line)
+	if i < 0 {
+		t.Fatalf("missing %q in %v", line, f.Lines())
+	}
+	return i
+}
+
+func focused(w domain.Workspace) domain.Workspace { w.Focused = true; return w }
