@@ -40,6 +40,10 @@ The watcher never closes a workspace whose folder still exists: check whether `w
 
 `alt` combinations depend on your terminal. Run `herdr plugin action invoke lucaspcq.wtm.bind` again and pick another key, such as `prefix+m` or `f12`.
 
+## Still the old version after an update
+
+Installing again replaces the plugin, but the watcher already running keeps the binary it started with until herdr restarts. Restart herdr; *Sync workspaces* does not replace a running watcher. If the plugin is linked from a local checkout (`herdr plugin link`), install refuses to replace it: `herdr plugin unlink lucaspcq.wtm` first.
+
 ## Starting over
 
 ```bash

@@ -49,7 +49,18 @@ cd your-repo && wtm init          # once per repository
 herdr plugin install LucasPcq/herdr-wtm
 ```
 
-Installation downloads the prebuilt binary for your platform (macOS and Linux, amd64 and arm64) and checks it against the release's checksums; without a matching binary it builds from source when Go is installed. Pin a version with `--ref v0.2.0`. Upgrading from 0.1? Read [Migrating to 0.2](docs/guide/migrating-to-0.2.md).
+Installation downloads the prebuilt binary for your platform (macOS and Linux, amd64 and arm64) and checks it against the release's checksums; without a matching binary it builds from source when Go is installed. Pin a version with `--ref v0.2.0`.
+
+### Updating
+
+herdr has no `plugin update`: install again, which replaces the plugin and keeps its config. Then restart herdr, so the background watcher starts on the new binary.
+
+```bash
+herdr plugin install LucasPcq/herdr-wtm --yes                # latest
+herdr plugin install LucasPcq/herdr-wtm --ref v0.2.0 --yes   # a given version
+```
+
+Upgrading from 0.1? Read [Migrating to 0.2](docs/guide/migrating-to-0.2.md). Each release's changes are in the [changelog](CHANGELOG.md).
 
 ## Usage
 
