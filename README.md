@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Your wtm worktrees, one keypress away in herdr.</strong><br>
-  A <a href="https://herdr.dev">herdr</a> plugin for <a href="https://github.com/LucasPcq/wtm">wtm</a>: run worktree commands from a popup and keep your workspace bar in sync with them.
+  A <a href="https://herdr.dev">herdr</a> plugin for <a href="https://github.com/LucasPcq/wtm">wtm</a>: run worktree commands from a popup, and watch your workspace bar follow your worktrees, whoever changes them.
 </p>
 
 <p align="center">
@@ -11,66 +11,35 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
 </p>
 
-> [!WARNING]
-> **Early preview.** This first version is a bridge to test how wtm and herdr work together: it drives wtm's
-> own CLI from a herdr popup and mirrors the result in herdr's workspaces. A deeper, cleaner integration
-> between the two is being designed. Expect changes, and please share what you would like to see in the
-> [issues](https://github.com/LucasPcq/herdr-wtm/issues).
+> **Status:** 0.x — usable day to day, still evolving with wtm's integration contract. Feedback welcome in the [issues](https://github.com/LucasPcq/herdr-wtm/issues).
 
 ## What is wtm?
 
-[**wtm**](https://github.com/LucasPcq/wtm) is a worktree manager built on one idea: **one branch, one worktree,
-one isolated dev stack**. It is made for people who work on several branches at once, and for the agents that
-do too.
+[**wtm**](https://github.com/LucasPcq/wtm) is a worktree manager built on one idea: **one branch, one worktree, one isolated dev stack**. `git worktree` gives each branch a directory; wtm provisions it (`.env` copied, `on_create` hooks run), gives it its own ports and containers, keeps stacked branches in order with `wtm sync`, and shows everything in `wtm ui`. It is built for scripts and agents too: `--output json`, `--yes`, and a live event stream.
 
-`git worktree` gives each branch its own directory. wtm does everything around it:
-
-- **A worktree is ready when it is created:** `.env` files copied, your `on_create` hooks run (`pnpm install`, …).
-- **Each worktree runs its own stack:** dev servers and `docker compose` on their own ports and project names,
-  side by side, without fighting over ports, containers or databases.
-- **Stacked branches stay in order:** every worktree knows its parent, and `wtm sync` rebases the whole chain.
-- **A dashboard for all of it:** `wtm ui` shows every worktree, the branch tree, PR status and running services.
-- **Built for scripts and agents:** JSON output, `--yes` everywhere, and a skill that teaches Claude Code or
-  Cursor to drive it.
-
-New to wtm? Start with its [README](https://github.com/LucasPcq/wtm#readme) and the
-[getting started guide](https://github.com/LucasPcq/wtm/blob/main/docs/guide/getting-started.md).
+New to wtm? Start with its [README](https://github.com/LucasPcq/wtm#readme) and [getting started guide](https://github.com/LucasPcq/wtm/blob/main/docs/guide/getting-started.md).
 
 ## Why herdr + wtm
 
-[herdr](https://herdr.dev) organizes terminals and coding agents into workspaces, and it already knows about
-git worktrees. wtm decides what a worktree *is*: provisioned, isolated, part of a stack. This plugin connects
-the two, so the worktrees wtm manages show up in herdr as workspaces, without leaving the keyboard (or the
-mouse):
+[herdr](https://herdr.dev) organizes terminals and coding agents into workspaces. wtm decides what a worktree *is*. This plugin connects the two:
 
-- **One menu for wtm.** A single key opens a popup with the wtm actions. Pick one with the keyboard or a click;
-  wtm runs in the popup, wizard and pickers included.
-- **Your workspace bar follows.** A worktree wtm creates opens as a herdr workspace and gets the focus. A
-  worktree wtm removes closes its workspace. Clean the worktree you are in, and you land back on the main
-  checkout.
-- **Nothing left behind.** `Sync workspaces` (also run when herdr starts) closes workspaces whose worktree was
-  removed elsewhere — from another shell, by an agent. It never closes the main checkout, nor a workspace whose
-  folder still exists.
+- **One menu for wtm.** A key opens a popup with wtm's actions — create, open, checkout a PR, clean, prune, the dashboard. wtm runs in the popup, wizards and pickers included.
+- **Your workspace bar follows your worktrees, whoever changes them.** A worktree created from the popup, another shell, an agent or `wtm ui` opens as a herdr workspace; a removed one closes its workspace. Within a second, no refresh.
+- **Focus follows you, not your agents.** What you do from the popup takes the focus — clean the worktree you are in and you land on the main checkout. What an agent does in the next pane never steals it.
+- **A failed `on_create` hook tells you.** If `pnpm install` fails in a new worktree, a herdr notification names the hook and its exit code.
+- **Nothing you care about is closed.** Only linked worktrees whose folder is gone; never the main checkout, never a folder still on disk.
 
 ## Install
 
-You need [herdr](https://herdr.dev) 0.9 or later and [wtm](https://github.com/LucasPcq/wtm):
+You need [herdr](https://herdr.dev) 0.9 or later and [wtm](https://github.com/LucasPcq/wtm) **0.29 or later**:
 
 ```bash
-brew install LucasPcq/tap/wtm     # or see wtm's README for other ways
+brew install LucasPcq/tap/wtm     # or `wtm upgrade` if you have it
 cd your-repo && wtm init          # once per repository
-```
-
-Then install the plugin:
-
-```bash
 herdr plugin install LucasPcq/herdr-wtm
 ```
 
-Installation downloads the prebuilt binary for your platform (macOS and Linux, amd64 and arm64) from the
-matching GitHub release and checks it against the release's checksums. No Go toolchain is needed; if no
-prebuilt binary fits, it builds from source when Go is installed. Pin a version with
-`herdr plugin install LucasPcq/herdr-wtm --ref v0.1.0`.
+Installation downloads the prebuilt binary for your platform (macOS and Linux, amd64 and arm64) and checks it against the release's checksums; without a matching binary it builds from source when Go is installed. Pin a version with `--ref v0.2.0`. Upgrading from 0.1? Read [Migrating to 0.2](docs/guide/migrating-to-0.2.md).
 
 ## Usage
 
@@ -80,47 +49,21 @@ Choose the key that opens the menu, once:
 herdr plugin action invoke lucaspcq.wtm.bind
 ```
 
-A small popup asks for the key: press <kbd>Enter</kbd> for the default, <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd>,
-or type your own (`prefix+m`, `ctrl+alt+w`, `f12`…). Keys herdr already uses are refused. The binding is added to
-herdr's `config.toml` (a backup is kept next to it as `config.toml.bak-herdr-wtm`) and the config is reloaded.
-Run it again to change the key.
+Press <kbd>Enter</kbd> for the default, <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd>, or type your own (`prefix+m`, `ctrl+alt+w`, `f12`…). Keys herdr already uses are refused; the binding is written to herdr's `config.toml` (a backup is kept as `config.toml.bak-herdr-wtm`) and the config is reloaded.
 
-<details>
-<summary>Or bind it by hand</summary>
-
-Add to `~/.config/herdr/config.toml`, then run `herdr server reload-config`:
-
-```toml
-[[keys.command]]
-key = "prefix+alt+w"
-type = "plugin_action"
-command = "lucaspcq.wtm.menu"
-description = "wtm menu"
-```
-
-</details>
-
-Press it from any workspace of a wtm repository:
+Then press it from any workspace of a wtm repository:
 
 | # | Entry | What happens |
 |---|---|---|
-| 1 | New worktree | `wtm create` wizard; the new worktree opens as a workspace |
+| 1 | New worktree | `wtm create`; the new worktree opens as a focused workspace |
 | 2 | Open a worktree | wtm's picker; herdr focuses that workspace, or opens it |
-| 3 | Checkout a pull request | `wtm checkout`; the PR's worktree opens as a workspace |
-| 4 | Clean this worktree | `wtm clean` on the current worktree (a picker from the main checkout); its workspace closes |
-| 5 | Prune finished worktrees | `wtm prune`; workspaces of removed worktrees close |
-| 6 | Dashboard | `wtm ui`; what you create or delete there is mirrored when you quit |
-| 7 | Sync workspaces | close workspaces whose worktree no longer exists |
+| 3 | Checkout a pull request | `wtm checkout`; the PR's worktree opens, focused |
+| 4 | Clean this worktree | `wtm clean` on the current worktree (a picker from the main checkout); you land on the main checkout |
+| 5 | Prune finished worktrees | `wtm prune`; the workspaces of removed worktrees close |
+| 6 | Dashboard | `wtm ui`; what you create or delete there shows up as you do it |
+| 7 | Sync workspaces | closes workspaces left behind, and restarts the watcher if it stopped |
 
-In the menu: <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> and <kbd>Enter</kbd>, a digit to run an
-entry directly, <kbd>Esc</kbd> to close — or click an entry.
-
-Each entry also exists as its own action (`lucaspcq.wtm.create`, `.open`, `.checkout`, `.clean`, `.prune`,
-`.ui`, `.sync`), to bind to a key or run with `herdr plugin action invoke`. Actions run against the repository
-of the workspace you invoke them from.
-
-`alt` combinations depend on your terminal: if <kbd>prefix</kbd>+<kbd>alt</kbd>+<kbd>w</kbd> does nothing, run the
-bind action again and pick another key.
+<kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> and <kbd>Enter</kbd>, a digit to run an entry, <kbd>Esc</kbd> to close — or click. Every entry is also its own action (`lucaspcq.wtm.create`, `.open`, `.checkout`, `.clean`, `.prune`, `.ui`, `.sync`) to bind to a key or run with `herdr plugin action invoke`.
 
 ## Configuration
 
@@ -128,34 +71,24 @@ Optional, in `$(herdr plugin config-dir lucaspcq.wtm)/config.toml`:
 
 ```toml
 wtm_bin = "wtm"        # path or name on PATH
-focus_on_open = true   # focus the last workspace opened after a command
 popup_width = "90%"
 popup_height = "90%"
 ```
 
+Details in [Configuration](docs/guide/configuration.md).
+
 ## How it works
 
-The plugin never changes what wtm does: it runs wtm's own commands. Around each one it reads
-`wtm list --output json` before and after, then opens and closes herdr workspaces through the herdr CLI to match
-what changed. A workspace is only closed when its worktree is gone from wtm and from disk.
-
-Logs go to the plugin's state directory (`herdr-wtm.log`) and to `herdr plugin log list --plugin lucaspcq.wtm`.
+The plugin never changes what wtm does. When herdr starts, it launches a small watcher that reads wtm's event stream (`wtm events`) and opens or closes workspaces as worktrees come and go, in the repositories herdr shows. The popup only runs wtm commands, tagged so the watcher knows which changes are yours. More in [How it works](docs/guide/how-it-works.md); when something looks off, [Troubleshooting](docs/guide/troubleshooting.md).
 
 ## Contributing
 
 ```bash
-go test ./...
-HERDR_WTM_BUILD_FROM_SOURCE=1 sh scripts/install.sh   # `plugin link` does not run [[build]]
-herdr plugin link "$PWD"
+make lint test
+make build && herdr plugin link "$PWD"   # `plugin link` does not run [[build]]
 ```
 
-### Releasing
-
-1. Set `version` in `herdr-plugin.toml` (e.g. `0.2.0`) and commit it on `main`.
-2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
-
-The Release workflow runs the tests, checks the tag matches the manifest version, and publishes the binaries with
-GoReleaser. A tag like `v0.2.0-beta.1` becomes a pre-release.
+The architecture, the conventions and the release process are in [`docs/dev/`](docs/dev/architecture.md).
 
 ## License
 
