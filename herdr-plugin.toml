@@ -9,7 +9,7 @@ platforms = ["linux", "macos"]
 command = ["sh", "scripts/install.sh"]
 
 [[startup]]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync --all"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" watch --detach"]
 
 [[panes]]
 id = "run"
@@ -72,3 +72,10 @@ id = "sync"
 title = "wtm: sync workspaces"
 contexts = ["workspace"]
 command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync"]
+
+# POC (LUC-233): start the event watcher by hand, without restarting herdr.
+[[actions]]
+id = "watch"
+title = "wtm: start the event watcher (POC)"
+contexts = ["global", "workspace"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" watch --detach"]

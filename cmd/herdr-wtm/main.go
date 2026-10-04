@@ -102,6 +102,11 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 			_ = d.Herdr.Notify("wtm", err.Error())
 		}
 		return err
+	case "watch":
+		if len(args) > 1 && args[1] == "--detach" {
+			return detachWatch()
+		}
+		return runWatch(d, getenv("HERDR_PLUGIN_STATE_DIR"))
 	}
 	return fmt.Errorf("unknown subcommand %q", args[0])
 }

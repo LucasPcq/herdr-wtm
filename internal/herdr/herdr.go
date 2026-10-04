@@ -54,6 +54,31 @@ func (c Client) Workspaces() ([]Workspace, error) {
 	return resp.Result.Workspaces, nil
 }
 
+// PaneCWDs returns the working directory of every pane.
+func (c Client) PaneCWDs() ([]string, error) {
+	out, err := c.Runner.Output("", c.Bin, "pane", "list")
+	if err != nil {
+		return nil, fmt.Errorf("herdr pane list: %w", err)
+	}
+	var resp struct {
+		Result struct {
+			Panes []struct {
+				CWD string `json:"cwd"`
+			} `json:"panes"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return nil, fmt.Errorf("parse herdr pane list: %w", err)
+	}
+	cwds := make([]string, 0, len(resp.Result.Panes))
+	for _, p := range resp.Result.Panes {
+		if p.CWD != "" {
+			cwds = append(cwds, p.CWD)
+		}
+	}
+	return cwds, nil
+}
+
 // OpenWorktree opens the worktree at path as a workspace of repo and returns its id.
 func (c Client) OpenWorktree(repo, path string, focus bool) (string, error) {
 	focusFlag := "--no-focus"
