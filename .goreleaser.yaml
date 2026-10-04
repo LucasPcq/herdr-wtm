@@ -29,10 +29,6 @@ checksum:
 release:
   prerelease: auto
 
+# Release notes come from CHANGELOG.md (make release-notes), not from commits.
 changelog:
-  sort: asc
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
+  disable: true

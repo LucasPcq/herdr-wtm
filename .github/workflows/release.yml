@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: go test ./... -race -count=1
+      - run: make test
       # install.sh downloads v<manifest version>: a tag that disagrees with the
       # manifest would publish binaries nobody can install.
       - name: Check tag matches manifest version
@@ -28,9 +28,15 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match herdr-plugin.toml version v$v"
             exit 1
           fi
+      - name: Extract release notes
+        # A beta tag has no section of its own yet: it ships what is under [Unreleased].
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          case "$version" in *-*) version=Unreleased ;; esac
+          make release-notes VERSION="$version" > "$RUNNER_TEMP/notes.md"
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
-          args: release --clean
+          args: release --clean --release-notes ${{ runner.temp }}/notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

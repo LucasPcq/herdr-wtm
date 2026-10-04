@@ -1,7 +1,7 @@
 BINARY    := herdr-wtm
 BUILD_DIR := bin
 
-.PHONY: build test vet fmt lint dead tidy snapshot clean
+.PHONY: build test vet fmt lint dead tidy snapshot release-notes clean
 
 build:
 	go build -o $(BUILD_DIR)/$(BINARY) ./cmd/herdr-wtm
@@ -36,3 +36,14 @@ snapshot:
 
 clean:
 	rm -rf $(BUILD_DIR) dist
+
+# release-notes prints the CHANGELOG section of VERSION (0.2.0, no v): the
+# release workflow publishes it as the GitHub release notes, where a relative
+# link would resolve under /releases/tag/, so docs links are pinned to the tag.
+NOTES_REF = $(if $(filter Unreleased,$(VERSION)),main,v$(VERSION))
+
+release-notes:
+	@test -n "$(VERSION)" || { echo "usage: make release-notes VERSION=x.y.z"; exit 1; }
+	@awk -v v="$(VERSION)" 'index($$0, "## [" v "]") == 1 { on = 1; next } on && /^## \[/ { exit } on && /^\[[^]]+\]: / { exit } on' CHANGELOG.md | \
+		sed -e '/./,$$!d' -e 's|](docs/|](https://github.com/LucasPcq/herdr-wtm/blob/$(NOTES_REF)/docs/|g'
+	@grep -q "^## \[$(VERSION)\]" CHANGELOG.md || { echo "no CHANGELOG section for $(VERSION)" >&2; exit 1; }
