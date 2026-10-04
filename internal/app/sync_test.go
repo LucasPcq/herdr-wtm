@@ -1,10 +1,15 @@
 package app_test
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
+	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 var mainCtx = domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
@@ -50,5 +55,24 @@ func TestSyncFailsWithoutSnapshot(t *testing.T) {
 	})
 	if err := d.Sync(mainCtx); err == nil {
 		t.Fatal("want error")
+	}
+}
+
+func TestSyncGivesUpWhenNoSnapshotComes(t *testing.T) {
+	dir := t.TempDir()
+	script := filepath.Join(dir, "wtm")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d, _, _ := newDeps(nil)
+	d.Wtm = wtm.Client{Runner: execx.OS{}, Bin: script}
+	d.SnapshotTimeout = 200 * time.Millisecond
+	start := time.Now()
+	err := d.Sync(domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: dir, RepoRoot: dir}})
+	if err == nil || !strings.Contains(err.Error(), "no snapshot") {
+		t.Fatalf("err %v", err)
+	}
+	if time.Since(start) > 5*time.Second {
+		t.Fatalf("sync waited %s", time.Since(start))
 	}
 }

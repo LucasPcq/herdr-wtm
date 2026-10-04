@@ -87,18 +87,32 @@ func streamStop(err error) error {
 func (d Deps) cancelWhenHerdrGone(ctx context.Context, cancel context.CancelFunc) {
 	tick := time.NewTicker(domain.WatchLivenessTick)
 	defer tick.Stop()
+	var alive liveness
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
-			if _, err := d.Herdr.Workspaces(); err != nil {
+			_, err := d.Herdr.Workspaces()
+			if alive.gone(err) {
 				d.Log.Printf("watch: herdr is gone, stopping: %v", err)
 				cancel()
 				return
 			}
 		}
 	}
+}
+
+// liveness tells herdr gone from herdr busy: only consecutive failures count.
+type liveness struct{ failures int }
+
+func (l *liveness) gone(err error) bool {
+	if err == nil {
+		l.failures = 0
+		return false
+	}
+	l.failures++
+	return l.failures >= domain.WatchLivenessFailures
 }
 
 func sleep(ctx context.Context, d time.Duration) bool {

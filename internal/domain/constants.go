@@ -99,6 +99,9 @@ const (
 	StreamBackoffMin  = time.Second
 	StreamBackoffMax  = 30 * time.Second
 	NotifyQuietWindow = time.Second
+	// SnapshotTimeout bounds Sync: `wtm events` waits forever for a daemon that cannot start.
+	SnapshotTimeout       = 10 * time.Second
+	WatchLivenessFailures = 3
 )
 
 // Sizes of the popups `launch` opens.

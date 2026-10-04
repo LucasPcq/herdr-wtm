@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/LucasPcq/herdr-wtm/internal/config"
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
@@ -36,6 +37,8 @@ type Deps struct {
 	HerdrConfig string
 	// StartWatcher makes sure a watcher runs; nil does nothing.
 	StartWatcher func() error
+	// SnapshotTimeout bounds Sync's wait for a snapshot; zero means domain.SnapshotTimeout.
+	SnapshotTimeout time.Duration
 }
 
 // fail shows err in the popup and waits for Enter so the user can read it.

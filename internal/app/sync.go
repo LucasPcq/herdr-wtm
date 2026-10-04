@@ -1,6 +1,7 @@
 package app
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -59,7 +60,8 @@ func (d Deps) syncRepo(repo string) error {
 // snapshot returns repo's worktree paths from the first snapshot of its event
 // stream, then ends the stream.
 func (d Deps) snapshot(repo string) ([]string, error) {
-	ctx, cancel := context.WithCancel(context.Background())
+	timeout := cmp.Or(d.SnapshotTimeout, domain.SnapshotTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	var paths []string
 	got := false
@@ -76,6 +78,9 @@ func (d Deps) snapshot(repo string) ([]string, error) {
 	}})
 	if got {
 		return paths, nil
+	}
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return nil, fmt.Errorf("wtm events gave no snapshot within %s: is wtm's daemon able to start? (wtm run daemon status)", timeout)
 	}
 	if err != nil {
 		return nil, err
