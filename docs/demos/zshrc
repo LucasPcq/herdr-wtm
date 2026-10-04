@@ -1,0 +1,3 @@
+# The demo shell: a short prompt, no user or host name, no pager to swallow keys.
+PS1='%F{blue}%1~%f %F{magenta}❯%f '
+export GIT_PAGER=cat PAGER=cat

@@ -17,6 +17,7 @@ herdr-wtm is a [herdr](https://herdr.dev) plugin for [wtm](https://github.com/Lu
 - **`README.md` is the product page**, not a reference: pitch, why herdr + wtm, install, usage, short configuration, a short "How it works" linking the guide. Anything longer belongs in `docs/guide/`.
 - **`docs/guide/`** (user guide) and **`docs/dev/`** (developer docs) are hand-written. A behaviour a user needs to understand goes in the guide, in the same change as the behaviour.
 - **`CHANGELOG.md`** is in English, Keep a Changelog shape, following [`docs/dev/changelog.md`](docs/dev/changelog.md). Each release section is published as the GitHub release notes by `make release-notes VERSION=x.y.z`.
+- **GIFs** in the README are recorded from `docs/demos/*.tape` (VHS driving tmux and an isolated herdr session, `docs/demos/setup.sh`): when a change alters what the sidebar, a notification or the popup shows, run `make demos`.
 - **Markdown:** never hard-wrap prose — one paragraph is one line.
 - `docs/superpowers/` is local and gitignored: design notes, never shipped.
 
@@ -88,6 +89,7 @@ make test          # go test ./... -race -count=1
 make build         # bin/herdr-wtm
 make release-notes VERSION=x.y.z   # print a CHANGELOG section as release notes
 make snapshot      # every release archive, unpublished (needs goreleaser)
+make demos         # re-record the README GIFs (needs vhs and tmux)
 ```
 
 - `.claude/hooks/pre-commit-gates.sh` runs `make lint` and a `go mod tidy` check on every `git commit` and blocks it on failure; it does not run the tests. `HERDR_WTM_SKIP_GATES=1 git commit …` only when the gate itself is wrong.

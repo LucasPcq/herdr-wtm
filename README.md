@@ -29,6 +29,16 @@ New to wtm? Start with its [README](https://github.com/LucasPcq/wtm#readme) and 
 - **A failed `on_create` hook tells you.** If `pnpm install` fails in a new worktree, a herdr notification names the hook and its exit code.
 - **Nothing you care about is closed.** Only linked worktrees whose folder is gone; never the main checkout, never a folder still on disk.
 
+<p align="center">
+  <img alt="wtm create and wtm clean run in a shell outside herdr; the worktrees appear in, then leave, herdr's sidebar, and the focus stays put" src="docs/assets/live-sidebar.gif" width="800">
+</p>
+
+An agent working in the next pane gets the same treatment: its worktrees open in the sidebar while you keep typing, and a failed `on_create` hook shows up as a notification.
+
+<p align="center">
+  <img alt="An agent pane creates two worktrees; they open in the sidebar while the focus stays in your pane, and a failed pnpm install raises a wtm toast" src="docs/assets/agent.gif" width="800">
+</p>
+
 ## Install
 
 You need [herdr](https://herdr.dev) 0.9 or later and [wtm](https://github.com/LucasPcq/wtm) **0.29 or later**:

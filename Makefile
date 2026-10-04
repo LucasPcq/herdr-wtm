@@ -1,7 +1,7 @@
 BINARY    := herdr-wtm
 BUILD_DIR := bin
 
-.PHONY: build test vet fmt lint dead tidy snapshot release-notes clean
+.PHONY: build test vet fmt lint dead tidy snapshot release-notes demos clean
 
 build:
 	go build -o $(BUILD_DIR)/$(BINARY) ./cmd/herdr-wtm
@@ -29,6 +29,11 @@ lint: fmt vet dead
 
 tidy:
 	go mod tidy
+
+# Re-records the README GIFs from docs/demos/*.tape (needs vhs and tmux), in an
+# isolated HOME and herdr session; `make demos TAPE=agent` records one.
+demos:
+	docs/demos/record.sh $(TAPE)
 
 # Builds every release archive without publishing (needs goreleaser).
 snapshot:
