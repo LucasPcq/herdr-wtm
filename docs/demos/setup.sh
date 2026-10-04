@@ -36,6 +36,13 @@ delivery = "herdr"
 
 [ui.toast.herdr]
 position = "bottom-right"
+
+# herdr-wtm plugin
+[[keys.command]]
+key = "prefix+m"
+type = "plugin_action"
+command = "lucaspcq.wtm.menu"
+description = "wtm menu"
 TOML
 
 cd "$HERDR_WTM_DEMO_ROOT/acme"
