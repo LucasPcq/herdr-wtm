@@ -33,6 +33,11 @@ target=${target//\'/}
 [[ "$target" = /* ]] || target="${hook_cwd:-$PWD}/$target"
 
 root=$(git -C "$target" rev-parse --show-toplevel 2>/dev/null) || exit 0
+# Only this project's own repository (or one of its worktrees): a commit aimed
+# at another repository must not run that repository's Makefile.
+project_common=$(git -C "${CLAUDE_PROJECT_DIR:-$hook_cwd}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || exit 0
+target_common=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || exit 0
+[[ "$project_common" == "$target_common" ]] || exit 0
 cd "$root" || exit 0
 [[ -f Makefile && -f go.mod ]] || exit 0
 

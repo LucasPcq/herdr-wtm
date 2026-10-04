@@ -21,8 +21,8 @@ fmt:
 # dead finds functions no path reaches, tests included; staticcheck only sees
 # what is unused inside one package.
 dead:
-	@go tool deadcode -test ./... > /tmp/herdr-wtm-deadcode || true
-	@test ! -s /tmp/herdr-wtm-deadcode || { echo "unreachable code:"; cat /tmp/herdr-wtm-deadcode; exit 1; }
+	@out=$$(go tool deadcode -test ./...) || exit 1; \
+		test -z "$$out" || { echo "unreachable code:"; echo "$$out"; exit 1; }
 
 lint: fmt vet dead
 	go tool staticcheck ./...
