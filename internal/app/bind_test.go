@@ -6,8 +6,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/app"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
 
 const herdrDefaults = "[keys]\n# prefix = \"ctrl+b\"\n# workspace_picker = \"prefix+w\"\n[server]\n"
@@ -143,7 +144,7 @@ func TestBindCancelledWritesNothing(t *testing.T) {
 
 func TestLaunchBindNeedsNoRepository(t *testing.T) {
 	d, f, _ := newDeps(nil)
-	if err := d.Launch("bind", herdr.Context{}); err != nil {
+	if err := d.Launch(app.LaunchParams{Cmd: domain.CmdBind}); err != nil {
 		t.Fatal(err)
 	}
 	if len(f.Calls) != 1 || !strings.Contains(f.Calls[0].Line(), "--env HERDR_WTM_CMD=bind") || strings.Contains(f.Calls[0].Line(), "HERDR_WTM_REPO") {

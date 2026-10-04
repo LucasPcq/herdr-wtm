@@ -4,47 +4,49 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/gitx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/rules"
 )
 
-// Launch opens the plugin popup that will run cmd for the repository the
-// action was invoked from.
-func (d Deps) Launch(cmd string, ctx herdr.Context) error {
-	if cmd == CmdBind {
-		// Binding a key needs no repository: a small popup with the prompt.
+type LaunchParams struct {
+	Cmd     string
+	Context domain.HerdrContext
+}
+
+// Launch opens the popup that runs Cmd for the repository the action was
+// invoked from, starting the watcher first so the popup's changes are followed.
+func (d Deps) Launch(p LaunchParams) error {
+	if p.Cmd == domain.CmdBind {
 		return d.Herdr.OpenPopup(herdr.PopupParams{
-			Plugin: d.PluginID, Entrypoint: "run", Width: "72", Height: "14",
-			Env: map[string]string{EnvCmd: CmdBind},
+			Plugin: domain.PluginID, Entrypoint: domain.PopupEntrypoint,
+			Width: domain.BindPopupWidth, Height: domain.BindPopupHeight,
+			Env: map[string]string{domain.EnvCmd: domain.CmdBind},
 		})
 	}
-	if !IsCommand(cmd) && cmd != CmdMenu {
-		return fmt.Errorf("unknown command %q", cmd)
+	if !rules.IsPopupCommand(p.Cmd) {
+		return fmt.Errorf("unknown command %q", p.Cmd)
 	}
-	repo, err := d.resolveRepo(ctx)
+	d.startWatcher()
+	repo, err := d.resolveRepo(p.Context)
 	if err != nil {
 		return err
 	}
 	origin := ""
-	if ctx.Worktree != nil && ctx.Worktree.IsLinked {
-		origin = ctx.Worktree.CheckoutPath
+	if p.Context.Worktree != nil && p.Context.Worktree.IsLinked {
+		origin = p.Context.Worktree.CheckoutPath
 	}
-	return d.Herdr.OpenPopup(herdr.PopupParams{
-		Plugin:     d.PluginID,
-		Entrypoint: "run",
-		Width:      d.Config.PopupWidth,
-		Height:     d.Config.PopupHeight,
-		Env:        map[string]string{EnvCmd: cmd, EnvRepo: repo, EnvOrigin: origin},
-	})
+	return d.OpenPopup(PopupRequest{Cmd: p.Cmd, Repo: repo, Origin: origin})
 }
 
-func (d Deps) resolveRepo(ctx herdr.Context) (string, error) {
-	if ctx.Worktree != nil && ctx.Worktree.RepoRoot != "" {
-		return ctx.Worktree.RepoRoot, nil
+func (d Deps) resolveRepo(hctx domain.HerdrContext) (string, error) {
+	if hctx.Worktree != nil && hctx.Worktree.RepoRoot != "" {
+		return hctx.Worktree.RepoRoot, nil
 	}
-	cwd := ctx.FocusedPaneCWD
+	cwd := hctx.FocusedPaneCWD
 	if cwd == "" {
-		cwd = ctx.WorkspaceCWD
+		cwd = hctx.WorkspaceCWD
 	}
 	if cwd == "" {
 		return "", errors.New("herdr gave no working directory for this workspace")

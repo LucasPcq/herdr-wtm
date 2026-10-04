@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
@@ -26,10 +27,10 @@ func TestWorkspacesParsesFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []herdr.Workspace{
-		{ID: "w3", Label: "app", Worktree: &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app", RepoRoot: "/Users/me/dev/app"}},
-		{ID: "wE", Label: "feat-login", Worktree: &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true}},
-		{ID: "wF", Label: "scratch"},
+	want := []domain.Workspace{
+		{ID: "w3", Label: "app", Worktree: &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app", RepoRoot: "/Users/me/dev/app"}},
+		{ID: "wE", Label: "feat-login", Worktree: &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true}},
+		{ID: "wF", Label: "scratch", Focused: true},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
@@ -43,11 +44,11 @@ func TestOpenWorktreeReturnsWorkspaceID(t *testing.T) {
 	data := fixture(t, "worktree-open.json")
 	f := &execx.Fake{Handler: func(execx.Call) ([]byte, error) { return data, nil }}
 	c := herdr.Client{Runner: f, Bin: "herdr"}
-	id, err := c.OpenWorktree("/Users/me/dev/app", "/Users/me/dev/app.worktrees/feat-new", true)
+	id, err := c.OpenWorktree(herdr.OpenParams{Repo: "/Users/me/dev/app", Path: "/Users/me/dev/app.worktrees/feat-new", Focus: true})
 	if err != nil || id != "wG" {
 		t.Fatalf("got %q, %v", id, err)
 	}
-	if _, err := c.OpenWorktree("/r", "/p", false); err != nil {
+	if _, err := c.OpenWorktree(herdr.OpenParams{Repo: "/r", Path: "/p"}); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
@@ -68,7 +69,7 @@ func TestSimpleCommands(t *testing.T) {
 	if err := c.Close("w3"); err != nil {
 		t.Fatal(err)
 	}
-	if err := c.Notify("wtm", "opened feat-new"); err != nil {
+	if err := c.Notify("opened feat-new"); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{
@@ -105,7 +106,7 @@ func TestErrorsPropagate(t *testing.T) {
 	if _, err := c.Workspaces(); err == nil {
 		t.Fatal("Workspaces: want error")
 	}
-	if _, err := c.OpenWorktree("/r", "/p", true); err == nil {
+	if _, err := c.OpenWorktree(herdr.OpenParams{Repo: "/r", Path: "/p", Focus: true}); err == nil {
 		t.Fatal("OpenWorktree: want error")
 	}
 	if err := c.Close("w1"); err == nil {
@@ -118,11 +119,11 @@ func TestParseContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := herdr.Context{
+	want := domain.HerdrContext{
 		WorkspaceID:    "wE",
 		WorkspaceCWD:   "/Users/me/dev/app.worktrees/feat login",
 		FocusedPaneCWD: "/Users/me/dev/app.worktrees/feat login/src",
-		Worktree:       &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true},
+		Worktree:       &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true},
 	}
 	if !reflect.DeepEqual(ctx, want) {
 		t.Fatalf("got %+v", ctx)
@@ -131,10 +132,48 @@ func TestParseContext(t *testing.T) {
 
 func TestParseContextEmpty(t *testing.T) {
 	ctx, err := herdr.ParseContext("")
-	if err != nil || !reflect.DeepEqual(ctx, herdr.Context{}) {
+	if err != nil || !reflect.DeepEqual(ctx, domain.HerdrContext{}) {
 		t.Fatalf("got %+v, %v", ctx, err)
 	}
 	if _, err := herdr.ParseContext("{nope"); err == nil {
 		t.Fatal("want parse error")
+	}
+}
+
+func TestOpenWorktreeFocusFlag(t *testing.T) {
+	for focus, flag := range map[bool]string{true: "--focus", false: "--no-focus"} {
+		f := &execx.Fake{Handler: func(execx.Call) ([]byte, error) { return []byte(`{"result":{"workspace":{"workspace_id":"w7"}}}`), nil }}
+		id, err := herdr.Client{Runner: f, Bin: "herdr"}.OpenWorktree(herdr.OpenParams{Repo: "/nx/app", Path: "/nx/app.wt/a", Focus: focus})
+		if err != nil || id != "w7" || f.Lines()[0] != "herdr worktree open --cwd /nx/app --path /nx/app.wt/a "+flag {
+			t.Fatalf("id %q err %v lines %v", id, err, f.Lines())
+		}
+	}
+}
+
+func TestNotifyUsesWtmTitle(t *testing.T) {
+	f := &execx.Fake{}
+	_ = herdr.Client{Runner: f, Bin: "herdr"}.Notify("hello")
+	if f.Lines()[0] != "herdr notification show wtm --body hello" {
+		t.Fatalf("lines %v", f.Lines())
+	}
+}
+
+func TestWorkspacesReadFocus(t *testing.T) {
+	f := &execx.Fake{Handler: func(execx.Call) ([]byte, error) {
+		return []byte(`{"result":{"workspaces":[{"workspace_id":"w1","focused":true}]}}`), nil
+	}}
+	ws, err := herdr.Client{Runner: f, Bin: "herdr"}.Workspaces()
+	if err != nil || len(ws) != 1 || !ws[0].Focused {
+		t.Fatalf("ws %+v err %v", ws, err)
+	}
+}
+
+func TestOpenPopupReportsBusy(t *testing.T) {
+	f := &execx.Fake{Handler: func(execx.Call) ([]byte, error) {
+		return nil, errors.New(`herdr plugin pane open: exit status 1: {"id":"cli:plugin","error":{"code":"ui_busy","message":"a popup pane is already open"}}`)
+	}}
+	err := herdr.Client{Runner: f, Bin: "herdr"}.OpenPopup(herdr.PopupParams{Plugin: "p", Entrypoint: "run"})
+	if !errors.Is(err, domain.ErrHerdrBusy) {
+		t.Fatalf("err %v", err)
 	}
 }

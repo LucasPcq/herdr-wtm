@@ -1,6 +1,6 @@
 id = "lucaspcq.wtm"
 name = "wtm"
-version = "0.1.0"
+version = "0.2.0"
 min_herdr_version = "0.9.0"
 description = "Run wtm worktree commands from herdr and keep workspaces in sync"
 platforms = ["linux", "macos"]
@@ -9,7 +9,7 @@ platforms = ["linux", "macos"]
 command = ["sh", "scripts/install.sh"]
 
 [[startup]]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" sync --all"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-wtm\" watch --detach"]
 
 [[panes]]
 id = "run"

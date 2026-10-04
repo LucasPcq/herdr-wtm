@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/keybind"
 )
 
@@ -25,7 +26,7 @@ func (d Deps) Bind() error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return d.fail(err)
 	}
-	used, err := keybind.Used(keybind.Defaults(defaults), string(original))
+	used, err := keybind.Used(keybind.UsedParams{Defaults: keybind.Defaults(defaults), UserConfig: string(original)})
 	if err != nil {
 		return d.fail(err)
 	}
@@ -35,19 +36,19 @@ func (d Deps) Bind() error {
 		return nil
 	}
 
-	mode := os.FileMode(0o644)
+	mode := domain.FileMode
 	if info, err := os.Stat(d.HerdrConfig); err == nil {
 		mode = info.Mode().Perm()
 	}
-	if err := os.MkdirAll(filepath.Dir(d.HerdrConfig), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(d.HerdrConfig), domain.DirMode); err != nil {
 		return d.fail(err)
 	}
 	if existed {
-		if err := os.WriteFile(d.HerdrConfig+".bak-herdr-wtm", original, mode); err != nil {
+		if err := os.WriteFile(d.HerdrConfig+domain.BindBackupSuffix, original, mode); err != nil {
 			return d.fail(err)
 		}
 	}
-	if err := os.WriteFile(d.HerdrConfig, []byte(keybind.SetMenuKey(string(original), key)), mode); err != nil {
+	if err := os.WriteFile(d.HerdrConfig, []byte(keybind.SetMenuKey(keybind.SetMenuKeyParams{Config: string(original), Key: key})), mode); err != nil {
 		return d.fail(err)
 	}
 	if err := d.Herdr.ReloadConfig(); err != nil {
@@ -60,9 +61,7 @@ func (d Deps) Bind() error {
 	}
 	msg := "wtm menu bound to " + key
 	fmt.Fprintln(d.Out, msg)
-	if err := d.Herdr.Notify("wtm", msg); err != nil {
-		d.Log.Printf("notify: %v", err)
-	}
+	d.notify(msg)
 	return nil
 }
 
@@ -71,7 +70,7 @@ func (d Deps) Bind() error {
 func (d Deps) askKey(used map[string]string) (key string, ok bool) {
 	in := bufio.NewReader(d.In)
 	for {
-		fmt.Fprintf(d.Out, "Key for the wtm menu [%s]: ", keybind.DefaultKey)
+		fmt.Fprintf(d.Out, "Key for the wtm menu [%s]: ", domain.DefaultMenuKey)
 		line, err := in.ReadString('\n')
 		if err != nil && line == "" {
 			return "", false
@@ -81,7 +80,7 @@ func (d Deps) askKey(used map[string]string) (key string, ok bool) {
 		}
 		key = keybind.Normalize(line)
 		if key == "" {
-			key = keybind.DefaultKey
+			key = domain.DefaultMenuKey
 		}
 		if !keybind.ValidKey(key) {
 			fmt.Fprintf(d.Out, "%q is not a valid key (examples: prefix+m, ctrl+alt+w, f12)\n", strings.TrimSpace(line))

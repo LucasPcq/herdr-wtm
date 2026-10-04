@@ -1,6 +1,12 @@
-package reconcile
+// Package fsx is the plugin's only reader of the filesystem's shape: path spelling and existence.
+package fsx
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
+)
 
 // Normalize returns a canonical spelling of p so wtm's and herdr's paths compare
 // equal: cleaned, with symlinks resolved on the deepest ancestor that still
@@ -23,3 +29,12 @@ func Normalize(p string) string {
 		dir = parent
 	}
 }
+
+// Exists reports whether anything is at p.
+func Exists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
+
+// OS is the real filesystem, for the rules that compare paths.
+func OS() domain.FS { return domain.FS{Normalize: Normalize, Exists: Exists} }

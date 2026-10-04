@@ -1,29 +1,16 @@
-// Package herdr drives the herdr CLI.
+// Package herdr drives the herdr CLI. herdr's argv is spelled only here.
 package herdr
 
 import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
 
-// WorktreeInfo is herdr's view of the git checkout behind a workspace.
-type WorktreeInfo struct {
-	CheckoutPath string `json:"checkout_path"`
-	RepoRoot     string `json:"repo_root"`
-	IsLinked     bool   `json:"is_linked_worktree"`
-}
-
-// Workspace is one entry of `herdr workspace list`.
-type Workspace struct {
-	ID       string        `json:"workspace_id"`
-	Label    string        `json:"label"`
-	Worktree *WorktreeInfo `json:"worktree"`
-}
-
-// PopupParams describes a plugin popup to open.
 type PopupParams struct {
 	Plugin     string
 	Entrypoint string
@@ -32,20 +19,19 @@ type PopupParams struct {
 	Env        map[string]string
 }
 
-// Client runs herdr CLI commands.
 type Client struct {
 	Runner execx.Runner
 	Bin    string
 }
 
-func (c Client) Workspaces() ([]Workspace, error) {
-	out, err := c.Runner.Output("", c.Bin, "workspace", "list")
+func (c Client) Workspaces() ([]domain.Workspace, error) {
+	out, err := c.output("workspace", "list")
 	if err != nil {
 		return nil, fmt.Errorf("herdr workspace list: %w", err)
 	}
 	var resp struct {
 		Result struct {
-			Workspaces []Workspace `json:"workspaces"`
+			Workspaces []domain.Workspace `json:"workspaces"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(out, &resp); err != nil {
@@ -54,19 +40,48 @@ func (c Client) Workspaces() ([]Workspace, error) {
 	return resp.Result.Workspaces, nil
 }
 
-// OpenWorktree opens the worktree at path as a workspace of repo and returns its id.
-func (c Client) OpenWorktree(repo, path string, focus bool) (string, error) {
+func (c Client) PaneCWDs() ([]string, error) {
+	out, err := c.output("pane", "list")
+	if err != nil {
+		return nil, fmt.Errorf("herdr pane list: %w", err)
+	}
+	var resp struct {
+		Result struct {
+			Panes []struct {
+				CWD string `json:"cwd"`
+			} `json:"panes"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return nil, fmt.Errorf("parse herdr pane list: %w", err)
+	}
+	cwds := make([]string, 0, len(resp.Result.Panes))
+	for _, p := range resp.Result.Panes {
+		if p.CWD != "" {
+			cwds = append(cwds, p.CWD)
+		}
+	}
+	return cwds, nil
+}
+
+type OpenParams struct {
+	Repo  string
+	Path  string
+	Focus bool
+}
+
+func (c Client) OpenWorktree(p OpenParams) (string, error) {
 	focusFlag := "--no-focus"
-	if focus {
+	if p.Focus {
 		focusFlag = "--focus"
 	}
-	out, err := c.Runner.Output("", c.Bin, "worktree", "open", "--cwd", repo, "--path", path, focusFlag)
+	out, err := c.output("worktree", "open", "--cwd", p.Repo, "--path", p.Path, focusFlag)
 	if err != nil {
 		return "", fmt.Errorf("herdr worktree open: %w", err)
 	}
 	var resp struct {
 		Result struct {
-			Workspace Workspace `json:"workspace"`
+			Workspace domain.Workspace `json:"workspace"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(out, &resp); err != nil {
@@ -83,8 +98,8 @@ func (c Client) Close(id string) error {
 	return c.run("workspace", "close", id)
 }
 
-func (c Client) Notify(title, body string) error {
-	return c.run("notification", "show", title, "--body", body)
+func (c Client) Notify(body string) error {
+	return c.run("notification", "show", domain.NotifyTitle, "--body", body)
 }
 
 func (c Client) OpenPopup(p PopupParams) error {
@@ -109,15 +124,19 @@ func (c Client) OpenPopup(p PopupParams) error {
 }
 
 func (c Client) run(args ...string) error {
-	if _, err := c.Runner.Output("", c.Bin, args...); err != nil {
-		return fmt.Errorf("herdr %s: %w", args[0], err)
+	_, err := c.output(args...)
+	if err == nil {
+		return nil
 	}
-	return nil
+	if strings.Contains(err.Error(), `"code":"ui_busy"`) {
+		return fmt.Errorf("herdr %s: %w", args[0], domain.ErrHerdrBusy)
+	}
+	return fmt.Errorf("herdr %s: %w", args[0], err)
 }
 
 // DefaultConfig returns `herdr --default-config`, the documented defaults.
 func (c Client) DefaultConfig() (string, error) {
-	out, err := c.Runner.Output("", c.Bin, "--default-config")
+	out, err := c.output("--default-config")
 	if err != nil {
 		return "", fmt.Errorf("herdr --default-config: %w", err)
 	}
@@ -127,7 +146,7 @@ func (c Client) DefaultConfig() (string, error) {
 // ReloadConfig asks the server to reload config.toml and fails unless herdr
 // applied it without diagnostics.
 func (c Client) ReloadConfig() error {
-	out, err := c.Runner.Output("", c.Bin, "server", "reload-config")
+	out, err := c.output("server", "reload-config")
 	if err != nil {
 		return fmt.Errorf("herdr server reload-config: %w", err)
 	}
@@ -144,4 +163,8 @@ func (c Client) ReloadConfig() error {
 		return fmt.Errorf("herdr did not apply the config (status %q): %s", resp.Result.Status, out)
 	}
 	return nil
+}
+
+func (c Client) output(args ...string) ([]byte, error) {
+	return c.Runner.Output(execx.Cmd{Name: c.Bin, Args: args})
 }
