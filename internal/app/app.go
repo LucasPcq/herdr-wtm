@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/LucasPcq/herdr-wtm/internal/config"
@@ -22,8 +21,6 @@ import (
 // Chooser shows the action menu and returns the chosen command, or "" when cancelled.
 type Chooser func(title string, items []menu.Item) (string, error)
 
-func IsCommand(cmd string) bool { return slices.Contains(domain.WtmCommands, cmd) }
-
 // Deps carries every collaborator; main wires real ones, tests wire fakes.
 type Deps struct {
 	Wtm    wtm.Client
@@ -32,7 +29,7 @@ type Deps struct {
 	Config config.Config
 	Out    io.Writer
 	In     io.Reader
-	Exists func(string) bool
+	FS     domain.FS
 	Log    *log.Logger
 	Choose Chooser
 	// Shield, when set, keeps SIGINT/SIGHUP from killing the process while a

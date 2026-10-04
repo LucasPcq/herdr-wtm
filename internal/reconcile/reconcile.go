@@ -1,5 +1,5 @@
-// Package reconcile computes which herdr workspaces to open or close from wtm
-// worktree snapshots. It performs no I/O beyond path normalization.
+// Package reconcile computes the popup's before/after workspace plan.
+// Diff is removed in 0.2.0 with the popup's before/after reconciliation.
 package reconcile
 
 import "github.com/LucasPcq/herdr-wtm/internal/domain"
@@ -12,58 +12,47 @@ type Plan struct {
 
 func (p Plan) Empty() bool { return len(p.Open) == 0 && len(p.Close) == 0 }
 
-// Diff opens worktrees that appeared between before and after (unless already
+type DiffParams struct {
+	Before     []domain.Worktree
+	After      []domain.Worktree
+	Workspaces []domain.Workspace
+	FS         domain.FS
+}
+
+// Diff opens worktrees that appeared between Before and After (unless already
 // open) and closes linked workspaces whose worktree disappeared from wtm and
 // from disk.
-func Diff(before, after []domain.Worktree, ws []domain.Workspace, exists func(string) bool) Plan {
-	beforeSet, afterSet := pathSet(before), pathSet(after)
+func Diff(p DiffParams) Plan {
+	beforeSet, afterSet := pathSet(p.Before, p.FS), pathSet(p.After, p.FS)
 	open := map[string]bool{}
-	for _, w := range ws {
+	for _, w := range p.Workspaces {
 		if w.Worktree != nil {
-			open[Normalize(w.Worktree.CheckoutPath)] = true
+			open[p.FS.Normalize(w.Worktree.CheckoutPath)] = true
 		}
 	}
 	var plan Plan
-	for _, wt := range after {
-		p := Normalize(wt.Path)
-		if !beforeSet[p] && !open[p] {
+	for _, wt := range p.After {
+		path := p.FS.Normalize(wt.Path)
+		if !beforeSet[path] && !open[path] {
 			plan.Open = append(plan.Open, wt.Path)
 		}
 	}
-	for _, w := range ws {
+	for _, w := range p.Workspaces {
 		if w.Worktree == nil || !w.Worktree.IsLinked {
 			continue
 		}
-		p := Normalize(w.Worktree.CheckoutPath)
-		if beforeSet[p] && !afterSet[p] && !exists(w.Worktree.CheckoutPath) {
+		path := p.FS.Normalize(w.Worktree.CheckoutPath)
+		if beforeSet[path] && !afterSet[path] && !p.FS.Exists(w.Worktree.CheckoutPath) {
 			plan.Close = append(plan.Close, w.ID)
 		}
 	}
 	return plan
 }
 
-// Stale closes repoRoot's linked workspaces whose checkout is neither a current
-// wtm worktree nor present on disk.
-func Stale(repoRoot string, current []domain.Worktree, ws []domain.Workspace, exists func(string) bool) Plan {
-	root := Normalize(repoRoot)
-	cur := pathSet(current)
-	var plan Plan
-	for _, w := range ws {
-		if w.Worktree == nil || !w.Worktree.IsLinked || Normalize(w.Worktree.RepoRoot) != root {
-			continue
-		}
-		if cur[Normalize(w.Worktree.CheckoutPath)] || exists(w.Worktree.CheckoutPath) {
-			continue
-		}
-		plan.Close = append(plan.Close, w.ID)
-	}
-	return plan
-}
-
-func pathSet(wts []domain.Worktree) map[string]bool {
+func pathSet(wts []domain.Worktree, fs domain.FS) map[string]bool {
 	set := make(map[string]bool, len(wts))
 	for _, wt := range wts {
-		set[Normalize(wt.Path)] = true
+		set[fs.Normalize(wt.Path)] = true
 	}
 	return set
 }

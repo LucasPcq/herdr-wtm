@@ -63,7 +63,7 @@ func TestSyncAllSkipsRepoWhenListFails(t *testing.T) {
 
 func TestSyncKeepsWorktreesStillOnDisk(t *testing.T) {
 	d, f, _ := newDeps(syncWorld(nil))
-	d.Exists = func(p string) bool { return p == "/nx/app.wt/gone" }
+	d.FS.Exists = func(p string) bool { return p == "/nx/app.wt/gone" }
 	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{RepoRoot: repo}}
 	if err := d.Sync(false, ctx); err != nil {
 		t.Fatal(err)

@@ -5,6 +5,7 @@ import (
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
+	"github.com/LucasPcq/herdr-wtm/internal/rules"
 )
 
 // Sync closes linked workspaces whose worktree is gone, for the invoking
@@ -61,7 +62,15 @@ func (d Deps) closeStale(repos []string, ws []domain.Workspace) reconcile.Plan {
 			d.Log.Printf("sync: skipping %s: %v", repo, err)
 			continue
 		}
-		plan.Close = append(plan.Close, reconcile.Stale(repo, current, ws, d.Exists).Close...)
+		plan.Close = append(plan.Close, rules.Stale(rules.StaleParams{RepoRoot: repo, Current: worktreePaths(current), Workspaces: ws, FS: d.FS})...)
 	}
 	return plan
+}
+
+func worktreePaths(wts []domain.Worktree) []string {
+	paths := make([]string, len(wts))
+	for i, wt := range wts {
+		paths[i] = wt.Path
+	}
+	return paths
 }

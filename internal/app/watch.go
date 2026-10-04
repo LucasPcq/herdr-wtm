@@ -9,6 +9,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/gitx"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
+	"github.com/LucasPcq/herdr-wtm/internal/rules"
 )
 
 // POC (LUC-233): Watch keeps herdr workspaces in sync with `wtm events`.
@@ -89,7 +90,7 @@ func (d Deps) handleEvent(repo string, ev domain.Event) {
 		for _, w := range ev.Worktrees {
 			current = append(current, domain.Worktree{Branch: w.Branch, Path: w.Path, IsParent: w.IsMain})
 		}
-		d.apply(repo, reconcile.Stale(repo, current, ws, d.Exists))
+		d.apply(repo, reconcile.Plan{Close: rules.Stale(rules.StaleParams{RepoRoot: repo, Current: worktreePaths(current), Workspaces: ws, FS: d.FS})})
 	case "worktree.created":
 		if ev.Worktree == nil || ev.Worktree.IsMain {
 			return
@@ -99,7 +100,7 @@ func (d Deps) handleEvent(repo string, ev domain.Event) {
 			d.Log.Printf("watch: %v", err)
 			return
 		}
-		if workspaceAt(ws, ev.Worktree.Path) != "" {
+		if workspaceID(d, ws, ev.Worktree.Path) != "" {
 			return
 		}
 		// Never steal focus: the change may come from an agent in another pane.
@@ -107,7 +108,7 @@ func (d Deps) handleEvent(repo string, ev domain.Event) {
 			d.Log.Printf("watch: open %s: %v", ev.Worktree.Path, err)
 		}
 	case "worktree.removed":
-		if ev.Worktree == nil || d.Exists(ev.Worktree.Path) {
+		if ev.Worktree == nil || d.FS.Exists(ev.Worktree.Path) {
 			return
 		}
 		ws, err := d.Herdr.Workspaces()
@@ -115,7 +116,7 @@ func (d Deps) handleEvent(repo string, ev domain.Event) {
 			d.Log.Printf("watch: %v", err)
 			return
 		}
-		if id := workspaceAt(ws, ev.Worktree.Path); id != "" && isLinked(ws, id) {
+		if id := workspaceID(d, ws, ev.Worktree.Path); id != "" && isLinked(ws, id) {
 			d.apply(repo, reconcile.Plan{Close: []string{id}})
 		}
 	}
@@ -153,17 +154,6 @@ func (d Deps) watchRepos(ws []domain.Workspace, watched map[string]bool) []strin
 	return repos
 }
 
-// workspaceAt returns the id of the workspace whose checkout is path, or "".
-func workspaceAt(ws []domain.Workspace, path string) string {
-	target := reconcile.Normalize(path)
-	for _, w := range ws {
-		if w.Worktree != nil && reconcile.Normalize(w.Worktree.CheckoutPath) == target {
-			return w.ID
-		}
-	}
-	return ""
-}
-
 func isLinked(ws []domain.Workspace, id string) bool {
 	i := slices.IndexFunc(ws, func(w domain.Workspace) bool { return w.ID == id })
 	return i >= 0 && ws[i].Worktree != nil && ws[i].Worktree.IsLinked
@@ -174,4 +164,9 @@ func eventPath(ev domain.Event) string {
 		return ev.Worktree.Path
 	}
 	return ev.Repo.Root
+}
+
+func workspaceID(d Deps, ws []domain.Workspace, path string) string {
+	w, _ := rules.WorkspaceAt(rules.WorkspaceAtParams{Workspaces: ws, Path: path, FS: d.FS})
+	return w.ID
 }

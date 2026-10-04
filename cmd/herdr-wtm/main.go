@@ -18,6 +18,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/config"
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
+	"github.com/LucasPcq/herdr-wtm/internal/fsx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
@@ -57,7 +58,7 @@ func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg confi
 		Config: cfg,
 		Out:    os.Stdout,
 		In:     os.Stdin,
-		Exists: exists,
+		FS:     fsx.OS(),
 		Log:    logger,
 		Choose: menu.Choose,
 		Shield: shieldSignals,
@@ -107,11 +108,6 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 		return runWatch(d, getenv(domain.EnvPluginState))
 	}
 	return fmt.Errorf("unknown subcommand %q", args[0])
-}
-
-func exists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
 }
 
 func newLogger(stateDir string) *log.Logger {

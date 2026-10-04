@@ -1,6 +1,7 @@
 package reconcile_test
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -72,7 +73,7 @@ func TestDiff(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := reconcile.Diff(tt.before, tt.after, tt.ws, gone)
+			got := reconcile.Diff(reconcile.DiffParams{Before: tt.before, After: tt.after, Workspaces: tt.ws, FS: fsWith(gone)})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Fatalf("got %+v, want %+v", got, tt.want)
 			}
@@ -87,33 +88,15 @@ func TestDiffKeepsWorkspaceWhoseFolderStillExists(t *testing.T) {
 	after := []domain.Worktree{wt(repo)}
 	ws := []domain.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")}
 	exists := func(p string) bool { return p == "/nx/app.wt/a" }
-	if got := reconcile.Diff(before, after, ws, exists); len(got.Close) != 0 {
+	if got := reconcile.Diff(reconcile.DiffParams{Before: before, After: after, Workspaces: ws, FS: fsWith(exists)}); len(got.Close) != 0 {
 		t.Fatalf("closed a workspace whose folder is still on disk: %+v", got)
 	}
 }
 
 func TestDiffNeverClosesPrimary(t *testing.T) {
-	got := reconcile.Diff([]domain.Worktree{wt(repo)}, nil, []domain.Workspace{primary("w1")}, gone)
+	got := reconcile.Diff(reconcile.DiffParams{Before: []domain.Worktree{wt(repo)}, Workspaces: []domain.Workspace{primary("w1")}, FS: fsWith(gone)})
 	if len(got.Close) != 0 {
 		t.Fatalf("closed primary: %+v", got)
-	}
-}
-
-func TestStale(t *testing.T) {
-	ws := []domain.Workspace{
-		primary("w1"),
-		linked("w2", "/nx/app.wt/gone"),
-		linked("w3", "/nx/app.wt/alive"),
-		linked("w4", "/nx/app.wt/outside-wtm"),
-		{ID: "w5", Worktree: &domain.WorktreeInfo{CheckoutPath: "/nx/other.wt/gone", RepoRoot: "/nx/other", IsLinked: true}},
-		{ID: "w6"},
-	}
-	current := []domain.Worktree{wt(repo), wt("/nx/app.wt/alive")}
-	exists := func(p string) bool { return p == "/nx/app.wt/outside-wtm" }
-	got := reconcile.Stale(repo, current, ws, exists)
-	want := reconcile.Plan{Close: []string{"w2"}}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }
 
@@ -121,4 +104,8 @@ func TestPlanEmpty(t *testing.T) {
 	if !(reconcile.Plan{}).Empty() || (reconcile.Plan{Close: []string{"w1"}}).Empty() {
 		t.Fatal("Empty is wrong")
 	}
+}
+
+func fsWith(exists func(string) bool) domain.FS {
+	return domain.FS{Normalize: filepath.Clean, Exists: exists}
 }

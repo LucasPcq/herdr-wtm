@@ -7,6 +7,7 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/gitx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/rules"
 )
 
 // Launch opens the plugin popup that will run cmd for the repository the
@@ -19,7 +20,7 @@ func (d Deps) Launch(cmd string, ctx domain.HerdrContext) error {
 			Env: map[string]string{domain.EnvCmd: domain.CmdBind},
 		})
 	}
-	if !IsCommand(cmd) && cmd != domain.CmdMenu {
+	if !rules.IsPopupCommand(cmd) {
 		return fmt.Errorf("unknown command %q", cmd)
 	}
 	repo, err := d.resolveRepo(ctx)

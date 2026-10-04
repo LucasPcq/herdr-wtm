@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -29,7 +30,7 @@ func newDeps(h func(execx.Call) ([]byte, error)) (app.Deps, *execx.Fake, *bytes.
 		Config: config.Default(),
 		Out:    out,
 		In:     strings.NewReader("\n"),
-		Exists: func(string) bool { return false },
+		FS:     domain.FS{Normalize: filepath.Clean, Exists: func(string) bool { return false }},
 		Log:    log.New(io.Discard, "", 0),
 	}
 	return d, f, out

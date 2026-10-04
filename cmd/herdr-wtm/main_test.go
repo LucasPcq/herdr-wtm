@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"log"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -19,7 +20,7 @@ func deps(f *execx.Fake) app.Deps {
 	return app.Deps{
 		Wtm: wtm.Client{Runner: f, Bin: "wtm"}, Herdr: herdr.Client{Runner: f, Bin: "herdr"}, Git: f,
 		Config: config.Default(), Out: io.Discard, In: strings.NewReader("\n"),
-		Exists: func(string) bool { return false }, Log: log.New(io.Discard, "", 0),
+		FS: domain.FS{Normalize: filepath.Clean, Exists: func(string) bool { return false }}, Log: log.New(io.Discard, "", 0),
 	}
 }
 
