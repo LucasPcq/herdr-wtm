@@ -4,7 +4,7 @@ All notable changes to herdr-wtm are documented here. The format follows [Keep a
 
 ## [Unreleased]
 
-## [0.2.0] - YYYY-MM-DD
+## [0.2.0] - 2026-10-04
 
 Workspaces follow your worktrees wherever they change, on top of wtm 0.29's event stream.
 
