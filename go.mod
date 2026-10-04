@@ -1,6 +1,6 @@
 module github.com/LucasPcq/herdr-wtm
 
-go 1.24.0
+go 1.26.0
 
 require (
 	github.com/BurntSushi/toml v1.6.0
@@ -24,6 +24,17 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
 	golang.org/x/text v0.3.8 // indirect
+	golang.org/x/tools v0.51.0 // indirect
+	honnef.co/go/tools v0.8.1 // indirect
+)
+
+tool (
+	golang.org/x/tools/cmd/deadcode
+	honnef.co/go/tools/cmd/staticcheck
 )

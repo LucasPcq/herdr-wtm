@@ -13,8 +13,14 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
-      - run: go vet ./...
-      - run: go test ./... -race -count=1
+      - name: Verify go.mod is tidy
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Lint
+        run: make lint
+      - name: Test
+        run: make test
 
   # Builds every release archive without publishing, so a broken
   # .goreleaser.yaml fails here rather than on the release tag.
