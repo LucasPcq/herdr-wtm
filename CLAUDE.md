@@ -92,4 +92,4 @@ make snapshot      # every release archive, unpublished (needs goreleaser)
 
 - `.claude/hooks/pre-commit-gates.sh` runs `make lint` and a `go mod tidy` check on every `git commit` and blocks it on failure; it does not run the tests. `HERDR_WTM_SKIP_GATES=1 git commit …` only when the gate itself is wrong.
 - **Invoke the `build-validator` subagent before marking any task done** — it adds the `-race` test suite and dependency hygiene.
-- Trying it in herdr: `make build && herdr plugin link "$PWD"` (`plugin link` does not run `[[build]]`), then restart herdr or run the `sync` action to start the watcher.
+- Trying it in herdr: `make build && herdr plugin link "$PWD"` (`plugin link` does not run `[[build]]`), then stop the running watcher (`pkill -f "herdr-wtm watch"`) and run the `sync` action, or restart herdr: a running watcher keeps its binary and config.

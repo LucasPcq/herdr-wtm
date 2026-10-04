@@ -24,7 +24,7 @@ Workspaces follow your worktrees wherever they change, on top of wtm 0.29's even
 
 ### Changed
 
-- **Sync workspaces** reads wtm's current state and restarts the watcher if it stopped.
+- **Sync workspaces** reads wtm's current state and starts the watcher if it stopped.
 - **Startup** starts the watcher instead of syncing every repository once. → [Migrating to 0.2](docs/guide/migrating-to-0.2.md#sync-at-startup-is-gone)
 
 ## [0.1.0] - 2026-10-02

@@ -38,4 +38,4 @@ The popup runs the wtm command you chose, as you would in a terminal: wizards, p
 
 ## Sync workspaces
 
-*Sync workspaces* is the repair tool: it restarts the watcher if needed, reads a fresh list of the repository's worktrees, and closes what is left behind. It says so when there was nothing to do.
+*Sync workspaces* is the repair tool: it starts the watcher if it stopped, reads a fresh list of the repository's worktrees, and closes what is left behind. It says so when there was nothing to do.

@@ -10,7 +10,7 @@ Optional, in `$(herdr plugin config-dir lucaspcq.wtm)/config.toml`:
 | `popup_width` | `"90%"` | popup width, as herdr takes it (`"90%"`, `"120"`) |
 | `popup_height` | `"90%"` | popup height |
 
-An empty value is refused with a notification; an unknown key is ignored. The file is read each time the plugin runs, so a change applies to the next popup; restart the watcher (*Sync workspaces*, or restart herdr) for it to apply there too.
+An empty value is refused with a notification; an unknown key is ignored. The file is read each time the plugin runs, so a change applies to the next popup; the watcher reads it once when it starts, so restart herdr for it to apply there too.
 
 ## The menu key
 

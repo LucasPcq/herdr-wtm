@@ -61,7 +61,7 @@ Then press it from any workspace of a wtm repository:
 | 4 | Clean this worktree | `wtm clean` on the current worktree (a picker from the main checkout); you land on the main checkout |
 | 5 | Prune finished worktrees | `wtm prune`; the workspaces of removed worktrees close |
 | 6 | Dashboard | `wtm ui`; what you create or delete there shows up as you do it |
-| 7 | Sync workspaces | closes workspaces left behind, and restarts the watcher if it stopped |
+| 7 | Sync workspaces | closes workspaces left behind, and starts the watcher if it stopped |
 
 <kbd>↑</kbd>/<kbd>↓</kbd> or <kbd>j</kbd>/<kbd>k</kbd> and <kbd>Enter</kbd>, a digit to run an entry, <kbd>Esc</kbd> to close — or click. Every entry is also its own action (`lucaspcq.wtm.create`, `.open`, `.checkout`, `.clean`, `.prune`, `.ui`, `.sync`) to bind to a key or run with `herdr plugin action invoke`.
 

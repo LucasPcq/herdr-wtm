@@ -17,7 +17,7 @@ wtm version --output json   # "events": 1
 
 ## Sync at startup is gone
 
-0.1 ran *Sync workspaces* for every repository when herdr started. 0.2 starts the watcher instead, which does the same on its first snapshot and keeps doing it. `herdr-wtm sync --all` no longer exists; the *Sync workspaces* action stays, for one repository, and also restarts the watcher.
+0.1 ran *Sync workspaces* for every repository when herdr started. 0.2 starts the watcher instead, which does the same on its first snapshot and keeps doing it. `herdr-wtm sync --all` no longer exists; the *Sync workspaces* action stays, for one repository, and also starts the watcher if it stopped.
 
 ## Nothing else to do
 

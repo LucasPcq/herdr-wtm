@@ -25,7 +25,7 @@ One sentence on what this release is about.
 
 ### Changed
 
-- **Sync workspaces** also restarts the watcher.
+- **Sync workspaces** also starts the watcher if it stopped.
 
 ### Fixed
 
