@@ -52,16 +52,17 @@ func main() {
 // newDeps wires the real collaborators.
 func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg config.Config) app.Deps {
 	return app.Deps{
-		Wtm:    wtm.Client{Runner: runner, Bin: cfg.WtmBin},
-		Herdr:  herdr.Client{Runner: runner, Bin: herdrBin},
-		Git:    runner,
-		Config: cfg,
-		Out:    os.Stdout,
-		In:     os.Stdin,
-		FS:     fsx.OS(),
-		Log:    logger,
-		Choose: menu.Choose,
-		Shield: shieldSignals,
+		Wtm:          wtm.Client{Runner: runner, Bin: cfg.WtmBin},
+		Herdr:        herdr.Client{Runner: runner, Bin: herdrBin},
+		Git:          runner,
+		Config:       cfg,
+		Out:          os.Stdout,
+		In:           os.Stdin,
+		FS:           fsx.OS(),
+		Log:          logger,
+		Choose:       menu.Choose,
+		Shield:       shieldSignals,
+		StartWatcher: detachWatch,
 		// HERDR_CONFIG_PATH overrides herdr's config location, as for herdr itself.
 		HerdrConfig: herdrConfigPath(),
 	}
@@ -80,7 +81,7 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 		d.Log.Printf("launch %s context=%s", args[1], raw)
 		ctx, err := herdr.ParseContext(raw)
 		if err == nil {
-			err = d.Launch(args[1], ctx)
+			err = d.Launch(app.LaunchParams{Cmd: args[1], Context: ctx})
 		}
 		if err != nil {
 			_ = d.Herdr.Notify(err.Error())
@@ -90,14 +91,13 @@ func dispatch(d app.Deps, args []string, getenv func(string) string) error {
 		if getenv(domain.EnvCmd) == domain.CmdBind {
 			return d.Bind()
 		}
-		return d.Run(getenv(domain.EnvCmd), getenv(domain.EnvRepo), getenv(domain.EnvOrigin))
+		return d.Run(app.RunParams{Cmd: getenv(domain.EnvCmd), Repo: getenv(domain.EnvRepo), Origin: getenv(domain.EnvOrigin)})
 	case "sync":
-		all := len(args) > 1 && args[1] == "--all"
 		ctx, err := herdr.ParseContext(getenv(domain.EnvPluginContext))
 		if err == nil {
-			err = d.Sync(all, ctx)
+			err = d.Sync(ctx)
 		}
-		if err != nil && !all {
+		if err != nil {
 			_ = d.Herdr.Notify(err.Error())
 		}
 		return err

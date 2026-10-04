@@ -1,85 +1,54 @@
 package app_test
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
 
-func otherWS(id, path string) domain.Workspace {
-	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: path, RepoRoot: "/nx/other", IsLinked: true}}
-}
+var mainCtx = domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 
-func syncWorld(otherListErr error) func(execx.Call) ([]byte, error) {
+func syncHandler(ws []domain.Workspace, snapshot ...domain.Event) func(execx.Call) ([]byte, error) {
 	return func(c execx.Call) ([]byte, error) {
-		switch {
-		case c.Line() == "herdr workspace list":
-			return workspacesJSON(primaryWS(), linkedWS("w2", "/nx/app.wt/gone"), linkedWS("w3", "/nx/app.wt/alive"),
-				otherWS("w4", "/nx/other.wt/gone"), domain.Workspace{ID: "w5"}), nil
-		case c.Line() == "wtm list --output json" && c.Dir == repo:
-			return listJSON(mainWT(), wt("alive", "/nx/app.wt/alive")), nil
-		case c.Line() == "wtm list --output json" && c.Dir == "/nx/other":
-			if otherListErr != nil {
-				return nil, otherListErr
-			}
-			return listJSON(wtm0("/nx/other")), nil
+		if c.Line() == "wtm events --output json --repo /nx/app" {
+			return eventLines(append(snapshot, domain.Event{V: 1, Type: domain.EventReady})...), nil
 		}
-		return nil, nil
+		return herdrState(ws)(c)
 	}
 }
 
-func TestSyncCurrentRepoOnly(t *testing.T) {
-	d, f, _ := newDeps(syncWorld(nil))
-	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
-	if err := d.Sync(false, ctx); err != nil {
+func TestSyncClosesWhatTheSnapshotNoLongerHolds(t *testing.T) {
+	d, f, _ := newDeps(syncHandler([]domain.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/gone"), linkedWS("w3", "/nx/app.wt/kept")}, snapshotEv("/nx/app.wt/kept")))
+	started := false
+	d.StartWatcher = func() error { started = true; return nil }
+	if err := d.Sync(mainCtx); err != nil {
 		t.Fatal(err)
+	}
+	if !started {
+		t.Fatal("sync must make sure the watcher runs")
 	}
 	assertHas(t, f, "herdr workspace close w2")
 	assertNoPrefix(t, f, "herdr workspace close w3")
-	assertNoPrefix(t, f, "herdr workspace close w4")
-	assertNoPrefix(t, f, "herdr workspace close w1")
+	assertHas(t, f, "herdr notification show wtm --body closed 1 workspace(s)")
 }
 
-func TestSyncAllCoversEveryRepo(t *testing.T) {
-	d, f, _ := newDeps(syncWorld(nil))
-	if err := d.Sync(true, domain.HerdrContext{}); err != nil {
+func TestSyncSaysWhenAlreadyInSync(t *testing.T) {
+	d, f, _ := newDeps(syncHandler([]domain.Workspace{primaryWS()}, snapshotEv()))
+	if err := d.Sync(mainCtx); err != nil {
 		t.Fatal(err)
 	}
-	assertHas(t, f, "herdr workspace close w2")
-	assertHas(t, f, "herdr workspace close w4")
-	assertNoPrefix(t, f, "herdr workspace close w3")
+	assertHas(t, f, "herdr notification show wtm --body workspaces already in sync")
 }
 
-func TestSyncAllSkipsRepoWhenListFails(t *testing.T) {
-	d, f, _ := newDeps(syncWorld(errors.New("wtm: not initialized")))
-	if err := d.Sync(true, domain.HerdrContext{}); err != nil {
-		t.Fatal(err)
-	}
-	assertHas(t, f, "herdr workspace close w2")
-	assertNoPrefix(t, f, "herdr workspace close w4")
-}
-
-func TestSyncKeepsWorktreesStillOnDisk(t *testing.T) {
-	d, f, _ := newDeps(syncWorld(nil))
-	d.FS.Exists = func(p string) bool { return p == "/nx/app.wt/gone" }
-	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{RepoRoot: repo}}
-	if err := d.Sync(false, ctx); err != nil {
-		t.Fatal(err)
-	}
-	assertNoPrefix(t, f, "herdr workspace close")
-}
-
-func TestSyncFailsWhenHerdrUnavailable(t *testing.T) {
-	d, f, _ := newDeps(func(c execx.Call) ([]byte, error) {
-		if c.Line() == "herdr workspace list" {
-			return nil, errors.New("socket closed")
+func TestSyncFailsWithoutSnapshot(t *testing.T) {
+	d, _, _ := newDeps(func(c execx.Call) ([]byte, error) {
+		if c.Line() == "wtm events --output json --repo /nx/app" {
+			return nil, execx.ExitError{Code: 12}
 		}
 		return nil, nil
 	})
-	if err := d.Sync(true, domain.HerdrContext{}); err == nil {
+	if err := d.Sync(mainCtx); err == nil {
 		t.Fatal("want error")
 	}
-	assertNoPrefix(t, f, "wtm")
 }

@@ -64,18 +64,6 @@ func TestDispatchRunReadsEnv(t *testing.T) {
 	}
 }
 
-func TestDispatchSyncAllDoesNotNotifyErrors(t *testing.T) {
-	f := &execx.Fake{Handler: func(c execx.Call) ([]byte, error) { return nil, io.ErrUnexpectedEOF }}
-	if err := dispatch(deps(f), []string{"sync", "--all"}, env(nil)); err == nil {
-		t.Fatal("want error")
-	}
-	for _, l := range f.Lines() {
-		if strings.HasPrefix(l, "herdr notification") {
-			t.Fatalf("startup sync must not notify errors: %v", f.Lines())
-		}
-	}
-}
-
 func TestDispatchUsage(t *testing.T) {
 	f := &execx.Fake{}
 	for _, args := range [][]string{nil, {"launch"}, {"bogus"}} {

@@ -1,74 +1,93 @@
 package app
 
 import (
-	"slices"
+	"context"
+	"errors"
+	"fmt"
 
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
-	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 	"github.com/LucasPcq/herdr-wtm/internal/rules"
+	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
-// Sync closes linked workspaces whose worktree is gone, for the invoking
-// workspace's repository or, with all, for every repository herdr shows.
-func (d Deps) Sync(all bool, ctx domain.HerdrContext) error {
+// Sync repairs the invoking workspace's repository: it makes sure the watcher
+// runs and closes the workspaces a fresh snapshot no longer holds.
+func (d Deps) Sync(hctx domain.HerdrContext) error {
+	d.startWatcher()
+	repo, err := d.resolveRepo(hctx)
+	if err != nil {
+		return err
+	}
+	return d.syncRepo(repo)
+}
+
+func (d Deps) syncFromPopup(repo string) error {
+	d.startWatcher()
+	if err := d.syncRepo(repo); err != nil {
+		return d.fail(err)
+	}
+	return nil
+}
+
+func (d Deps) syncRepo(repo string) error {
+	paths, err := d.snapshot(repo)
+	if err != nil {
+		return err
+	}
 	ws, err := d.Herdr.Workspaces()
 	if err != nil {
 		return err
 	}
-	var repos []string
-	if all {
-		for _, w := range ws {
-			if w.Worktree != nil && w.Worktree.RepoRoot != "" && !slices.Contains(repos, w.Worktree.RepoRoot) {
-				repos = append(repos, w.Worktree.RepoRoot)
-			}
-		}
-	} else {
-		repo, err := d.resolveRepo(ctx)
-		if err != nil {
-			return err
-		}
-		repos = []string{repo}
-	}
-
-	d.apply("", d.closeStale(repos, ws))
-	return nil
-}
-
-// syncRepo is Sync for one repository, run from the menu: it always reports
-// back so a manual sync never ends in silence.
-func (d Deps) syncRepo(repo string) error {
-	ws, err := d.Herdr.Workspaces()
-	if err != nil {
-		return d.fail(err)
-	}
-	plan := d.closeStale([]string{repo}, ws)
-	if plan.Empty() {
+	stale := rules.Stale(rules.StaleParams{RepoRoot: repo, Current: paths, Workspaces: ws, FS: d.FS})
+	if len(stale) == 0 {
 		d.notify("workspaces already in sync")
 		return nil
 	}
-	d.apply(repo, plan)
+	closed := 0
+	var failures []string
+	for _, id := range stale {
+		if err := d.Herdr.Close(id); err != nil {
+			failures = append(failures, fmt.Sprintf("close %s: %v", id, err))
+			continue
+		}
+		closed++
+	}
+	d.notify(rules.Summary(rules.SummaryParams{Closed: closed, Failures: failures}))
 	return nil
 }
 
-// closeStale plans closing the stale workspaces of repos, skipping (and
-// logging) a repository whose wtm list fails.
-func (d Deps) closeStale(repos []string, ws []domain.Workspace) reconcile.Plan {
-	var plan reconcile.Plan
-	for _, repo := range repos {
-		current, err := d.Wtm.List(repo)
-		if err != nil {
-			d.Log.Printf("sync: skipping %s: %v", repo, err)
-			continue
+// snapshot returns repo's worktree paths from the first snapshot of its event
+// stream, then ends the stream.
+func (d Deps) snapshot(repo string) ([]string, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var paths []string
+	got := false
+	err := d.Wtm.Events(ctx, wtm.EventsParams{Repo: repo, OnEvent: func(ev domain.Event) {
+		switch ev.Type {
+		case domain.EventSnapshot:
+			for _, wt := range ev.Worktrees {
+				paths = append(paths, wt.Path)
+			}
+			got = true
+		case domain.EventReady:
+			cancel()
 		}
-		plan.Close = append(plan.Close, rules.Stale(rules.StaleParams{RepoRoot: repo, Current: worktreePaths(current), Workspaces: ws, FS: d.FS})...)
+	}})
+	if got {
+		return paths, nil
 	}
-	return plan
+	if err != nil {
+		return nil, err
+	}
+	return nil, errors.New("wtm events ended before its snapshot")
 }
 
-func worktreePaths(wts []domain.Worktree) []string {
-	paths := make([]string, len(wts))
-	for i, wt := range wts {
-		paths[i] = wt.Path
+func (d Deps) startWatcher() {
+	if d.StartWatcher == nil {
+		return
 	}
-	return paths
+	if err := d.StartWatcher(); err != nil {
+		d.Log.Printf("start watcher: %v", err)
+	}
 }

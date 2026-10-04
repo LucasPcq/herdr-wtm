@@ -66,17 +66,6 @@ func linkedWS(id, path string) domain.Workspace {
 	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: path, RepoRoot: repo, IsLinked: true}}
 }
 
-// snapshots answers successive `wtm list` calls with each snapshot in turn
-// (the last one repeats).
-func snapshots(lists ...[]byte) func() []byte {
-	n := 0
-	return func() []byte {
-		i := min(n, len(lists)-1)
-		n++
-		return lists[i]
-	}
-}
-
 func assertHas(t *testing.T, f *execx.Fake, line string) {
 	t.Helper()
 	if !slices.Contains(f.Lines(), line) {
@@ -91,10 +80,6 @@ func assertNoPrefix(t *testing.T, f *execx.Fake, prefix string) {
 			t.Fatalf("unexpected %q in %v", l, f.Lines())
 		}
 	}
-}
-
-func wtm0(path string) domain.Worktree {
-	return domain.Worktree{Branch: "main", Path: path, IsParent: true}
 }
 
 var appRepo = domain.EventRepo{Root: repo, CommonDir: repo + "/.git"}
