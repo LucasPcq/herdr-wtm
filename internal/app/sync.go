@@ -3,13 +3,13 @@ package app
 import (
 	"slices"
 
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
 )
 
 // Sync closes linked workspaces whose worktree is gone, for the invoking
 // workspace's repository or, with all, for every repository herdr shows.
-func (d Deps) Sync(all bool, ctx herdr.Context) error {
+func (d Deps) Sync(all bool, ctx domain.HerdrContext) error {
 	ws, err := d.Herdr.Workspaces()
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (d Deps) syncRepo(repo string) error {
 
 // closeStale plans closing the stale workspaces of repos, skipping (and
 // logging) a repository whose wtm list fails.
-func (d Deps) closeStale(repos []string, ws []herdr.Workspace) reconcile.Plan {
+func (d Deps) closeStale(repos []string, ws []domain.Workspace) reconcile.Plan {
 	var plan reconcile.Plan
 	for _, repo := range repos {
 		current, err := d.Wtm.List(repo)

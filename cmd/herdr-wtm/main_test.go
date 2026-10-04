@@ -9,6 +9,7 @@ import (
 
 	"github.com/LucasPcq/herdr-wtm/internal/app"
 	"github.com/LucasPcq/herdr-wtm/internal/config"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
@@ -17,7 +18,7 @@ import (
 func deps(f *execx.Fake) app.Deps {
 	return app.Deps{
 		Wtm: wtm.Client{Runner: f, Bin: "wtm"}, Herdr: herdr.Client{Runner: f, Bin: "herdr"}, Git: f,
-		Config: config.Default(), PluginID: "lucaspcq.wtm", Out: io.Discard, In: strings.NewReader("\n"),
+		Config: config.Default(), Out: io.Discard, In: strings.NewReader("\n"),
 		Exists: func(string) bool { return false }, Log: log.New(io.Discard, "", 0),
 	}
 }
@@ -53,7 +54,7 @@ func TestDispatchRunReadsEnv(t *testing.T) {
 		}
 		return []byte("[]"), nil
 	}}
-	e := env(map[string]string{app.EnvCmd: "prune", app.EnvRepo: "/nx/app"})
+	e := env(map[string]string{domain.EnvCmd: "prune", domain.EnvRepo: "/nx/app"})
 	if err := dispatch(deps(f), []string{"run"}, e); err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +112,7 @@ func TestDispatchRunBindAsksForKey(t *testing.T) {
 	d := deps(f)
 	d.HerdrConfig = t.TempDir() + "/config.toml"
 	d.In = strings.NewReader("") // cancelled at the prompt
-	if err := dispatch(d, []string{"run"}, env(map[string]string{app.EnvCmd: "bind"})); err != nil {
+	if err := dispatch(d, []string{"run"}, env(map[string]string{domain.EnvCmd: "bind"})); err != nil {
 		t.Fatal(err)
 	}
 	if !slices.Contains(f.Lines(), "herdr --default-config") || slices.ContainsFunc(f.Lines(), func(l string) bool { return strings.HasPrefix(l, "wtm") }) {

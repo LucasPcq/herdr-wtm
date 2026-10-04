@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/LucasPcq/herdr-wtm/internal/config"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
@@ -18,40 +19,22 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
-// Environment passed from `launch` to the popup's `run`.
-const (
-	EnvCmd    = "HERDR_WTM_CMD"
-	EnvRepo   = "HERDR_WTM_REPO"
-	EnvOrigin = "HERDR_WTM_ORIGIN"
-)
-
-// Pseudo-commands handled by the plugin itself rather than passed to wtm.
-const (
-	CmdMenu = "menu"
-	CmdSync = "sync"
-	CmdBind = "bind"
-)
-
 // Chooser shows the action menu and returns the chosen command, or "" when cancelled.
 type Chooser func(title string, items []menu.Item) (string, error)
 
-// Commands are the wtm commands the plugin exposes, in manifest order.
-var Commands = []string{"create", "checkout", "open", "clean", "prune", "ui"}
-
-func IsCommand(cmd string) bool { return slices.Contains(Commands, cmd) }
+func IsCommand(cmd string) bool { return slices.Contains(domain.WtmCommands, cmd) }
 
 // Deps carries every collaborator; main wires real ones, tests wire fakes.
 type Deps struct {
-	Wtm      wtm.Client
-	Herdr    herdr.Client
-	Git      execx.Runner
-	Config   config.Config
-	PluginID string
-	Out      io.Writer
-	In       io.Reader
-	Exists   func(string) bool
-	Log      *log.Logger
-	Choose   Chooser
+	Wtm    wtm.Client
+	Herdr  herdr.Client
+	Git    execx.Runner
+	Config config.Config
+	Out    io.Writer
+	In     io.Reader
+	Exists func(string) bool
+	Log    *log.Logger
+	Choose Chooser
 	// Shield, when set, keeps SIGINT/SIGHUP from killing the process while a
 	// wtm command runs, so its changes still get reconciled; it returns the
 	// function that lifts the shield.

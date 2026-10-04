@@ -6,22 +6,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
-
-// WorktreeInfo is herdr's view of the git checkout behind a workspace.
-type WorktreeInfo struct {
-	CheckoutPath string `json:"checkout_path"`
-	RepoRoot     string `json:"repo_root"`
-	IsLinked     bool   `json:"is_linked_worktree"`
-}
-
-// Workspace is one entry of `herdr workspace list`.
-type Workspace struct {
-	ID       string        `json:"workspace_id"`
-	Label    string        `json:"label"`
-	Worktree *WorktreeInfo `json:"worktree"`
-}
 
 // PopupParams describes a plugin popup to open.
 type PopupParams struct {
@@ -38,14 +25,14 @@ type Client struct {
 	Bin    string
 }
 
-func (c Client) Workspaces() ([]Workspace, error) {
+func (c Client) Workspaces() ([]domain.Workspace, error) {
 	out, err := c.output("workspace", "list")
 	if err != nil {
 		return nil, fmt.Errorf("herdr workspace list: %w", err)
 	}
 	var resp struct {
 		Result struct {
-			Workspaces []Workspace `json:"workspaces"`
+			Workspaces []domain.Workspace `json:"workspaces"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(out, &resp); err != nil {
@@ -91,7 +78,7 @@ func (c Client) OpenWorktree(repo, path string, focus bool) (string, error) {
 	}
 	var resp struct {
 		Result struct {
-			Workspace Workspace `json:"workspace"`
+			Workspace domain.Workspace `json:"workspace"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(out, &resp); err != nil {

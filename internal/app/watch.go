@@ -6,10 +6,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/gitx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
-	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 // POC (LUC-233): Watch keeps herdr workspaces in sync with `wtm events`.
@@ -54,7 +53,7 @@ func (d Deps) streamRepo(ctx context.Context, repo string, mu *sync.Mutex) {
 	backoff := time.Second
 	for ctx.Err() == nil {
 		ready := false
-		err := d.Wtm.Events(ctx, repo, func(ev wtm.Event) {
+		err := d.Wtm.Events(ctx, repo, func(ev domain.Event) {
 			mu.Lock()
 			defer mu.Unlock()
 			ready = ready || ev.Type == "ready"
@@ -77,7 +76,7 @@ func (d Deps) streamRepo(ctx context.Context, repo string, mu *sync.Mutex) {
 	}
 }
 
-func (d Deps) handleEvent(repo string, ev wtm.Event) {
+func (d Deps) handleEvent(repo string, ev domain.Event) {
 	d.Log.Printf("watch: %s %s", ev.Type, eventPath(ev))
 	switch ev.Type {
 	case "snapshot":
@@ -86,9 +85,9 @@ func (d Deps) handleEvent(repo string, ev wtm.Event) {
 			d.Log.Printf("watch: %v", err)
 			return
 		}
-		current := make([]wtm.Worktree, 0, len(ev.Worktrees))
+		current := make([]domain.Worktree, 0, len(ev.Worktrees))
 		for _, w := range ev.Worktrees {
-			current = append(current, wtm.Worktree{Branch: w.Branch, Path: w.Path, IsParent: w.IsMain})
+			current = append(current, domain.Worktree{Branch: w.Branch, Path: w.Path, IsParent: w.IsMain})
 		}
 		d.apply(repo, reconcile.Stale(repo, current, ws, d.Exists))
 	case "worktree.created":
@@ -126,7 +125,7 @@ func (d Deps) handleEvent(repo string, ev wtm.Event) {
 // on workspaces, plus those holding a pane's cwd, since herdr only reports a
 // worktree for workspaces it opened as one. Paths seen are remembered in
 // watched, so a pane outside any repository costs one git call.
-func (d Deps) watchRepos(ws []herdr.Workspace, watched map[string]bool) []string {
+func (d Deps) watchRepos(ws []domain.Workspace, watched map[string]bool) []string {
 	var repos []string
 	add := func(repo string) {
 		if !watched[repo] && !slices.Contains(repos, repo) {
@@ -155,7 +154,7 @@ func (d Deps) watchRepos(ws []herdr.Workspace, watched map[string]bool) []string
 }
 
 // workspaceAt returns the id of the workspace whose checkout is path, or "".
-func workspaceAt(ws []herdr.Workspace, path string) string {
+func workspaceAt(ws []domain.Workspace, path string) string {
 	target := reconcile.Normalize(path)
 	for _, w := range ws {
 		if w.Worktree != nil && reconcile.Normalize(w.Worktree.CheckoutPath) == target {
@@ -165,12 +164,12 @@ func workspaceAt(ws []herdr.Workspace, path string) string {
 	return ""
 }
 
-func isLinked(ws []herdr.Workspace, id string) bool {
-	i := slices.IndexFunc(ws, func(w herdr.Workspace) bool { return w.ID == id })
+func isLinked(ws []domain.Workspace, id string) bool {
+	i := slices.IndexFunc(ws, func(w domain.Workspace) bool { return w.ID == id })
 	return i >= 0 && ws[i].Worktree != nil && ws[i].Worktree.IsLinked
 }
 
-func eventPath(ev wtm.Event) string {
+func eventPath(ev domain.Event) string {
 	if ev.Worktree != nil {
 		return ev.Worktree.Path
 	}

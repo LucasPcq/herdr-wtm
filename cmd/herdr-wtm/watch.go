@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/LucasPcq/herdr-wtm/internal/app"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 )
 
 // POC (LUC-233): herdr's [[startup]] hooks are one-shot, so `watch --detach`
@@ -33,7 +34,7 @@ func detachWatch() error {
 // second startup hook, after a herdr handoff).
 func runWatch(d app.Deps, stateDir string) error {
 	if stateDir != "" {
-		f, err := os.OpenFile(filepath.Join(stateDir, "watch.lock"), os.O_CREATE|os.O_RDWR, 0o644)
+		f, err := os.OpenFile(filepath.Join(stateDir, domain.WatchLockFile), os.O_CREATE|os.O_RDWR, domain.FileMode)
 		if err != nil {
 			return err
 		}

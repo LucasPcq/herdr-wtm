@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
@@ -26,10 +27,10 @@ func TestWorkspacesParsesFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []herdr.Workspace{
-		{ID: "w3", Label: "app", Worktree: &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app", RepoRoot: "/Users/me/dev/app"}},
-		{ID: "wE", Label: "feat-login", Worktree: &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true}},
-		{ID: "wF", Label: "scratch"},
+	want := []domain.Workspace{
+		{ID: "w3", Label: "app", Worktree: &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app", RepoRoot: "/Users/me/dev/app"}},
+		{ID: "wE", Label: "feat-login", Worktree: &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true}},
+		{ID: "wF", Label: "scratch", Focused: true},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %+v", got)
@@ -118,11 +119,11 @@ func TestParseContext(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := herdr.Context{
+	want := domain.HerdrContext{
 		WorkspaceID:    "wE",
 		WorkspaceCWD:   "/Users/me/dev/app.worktrees/feat login",
 		FocusedPaneCWD: "/Users/me/dev/app.worktrees/feat login/src",
-		Worktree:       &herdr.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true},
+		Worktree:       &domain.WorktreeInfo{CheckoutPath: "/Users/me/dev/app.worktrees/feat login", RepoRoot: "/Users/me/dev/app", IsLinked: true},
 	}
 	if !reflect.DeepEqual(ctx, want) {
 		t.Fatalf("got %+v", ctx)
@@ -131,7 +132,7 @@ func TestParseContext(t *testing.T) {
 
 func TestParseContextEmpty(t *testing.T) {
 	ctx, err := herdr.ParseContext("")
-	if err != nil || !reflect.DeepEqual(ctx, herdr.Context{}) {
+	if err != nil || !reflect.DeepEqual(ctx, domain.HerdrContext{}) {
 		t.Fatalf("got %+v, %v", ctx, err)
 	}
 	if _, err := herdr.ParseContext("{nope"); err == nil {

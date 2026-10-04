@@ -4,12 +4,12 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
 
-func otherWS(id, path string) herdr.Workspace {
-	return herdr.Workspace{ID: id, Worktree: &herdr.WorktreeInfo{CheckoutPath: path, RepoRoot: "/nx/other", IsLinked: true}}
+func otherWS(id, path string) domain.Workspace {
+	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: path, RepoRoot: "/nx/other", IsLinked: true}}
 }
 
 func syncWorld(otherListErr error) func(execx.Call) ([]byte, error) {
@@ -17,7 +17,7 @@ func syncWorld(otherListErr error) func(execx.Call) ([]byte, error) {
 		switch {
 		case c.Line() == "herdr workspace list":
 			return workspacesJSON(primaryWS(), linkedWS("w2", "/nx/app.wt/gone"), linkedWS("w3", "/nx/app.wt/alive"),
-				otherWS("w4", "/nx/other.wt/gone"), herdr.Workspace{ID: "w5"}), nil
+				otherWS("w4", "/nx/other.wt/gone"), domain.Workspace{ID: "w5"}), nil
 		case c.Line() == "wtm list --output json" && c.Dir == repo:
 			return listJSON(mainWT(), wt("alive", "/nx/app.wt/alive")), nil
 		case c.Line() == "wtm list --output json" && c.Dir == "/nx/other":
@@ -32,7 +32,7 @@ func syncWorld(otherListErr error) func(execx.Call) ([]byte, error) {
 
 func TestSyncCurrentRepoOnly(t *testing.T) {
 	d, f, _ := newDeps(syncWorld(nil))
-	ctx := herdr.Context{Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 	if err := d.Sync(false, ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestSyncCurrentRepoOnly(t *testing.T) {
 
 func TestSyncAllCoversEveryRepo(t *testing.T) {
 	d, f, _ := newDeps(syncWorld(nil))
-	if err := d.Sync(true, herdr.Context{}); err != nil {
+	if err := d.Sync(true, domain.HerdrContext{}); err != nil {
 		t.Fatal(err)
 	}
 	assertHas(t, f, "herdr workspace close w2")
@@ -54,7 +54,7 @@ func TestSyncAllCoversEveryRepo(t *testing.T) {
 
 func TestSyncAllSkipsRepoWhenListFails(t *testing.T) {
 	d, f, _ := newDeps(syncWorld(errors.New("wtm: not initialized")))
-	if err := d.Sync(true, herdr.Context{}); err != nil {
+	if err := d.Sync(true, domain.HerdrContext{}); err != nil {
 		t.Fatal(err)
 	}
 	assertHas(t, f, "herdr workspace close w2")
@@ -64,7 +64,7 @@ func TestSyncAllSkipsRepoWhenListFails(t *testing.T) {
 func TestSyncKeepsWorktreesStillOnDisk(t *testing.T) {
 	d, f, _ := newDeps(syncWorld(nil))
 	d.Exists = func(p string) bool { return p == "/nx/app.wt/gone" }
-	ctx := herdr.Context{Worktree: &herdr.WorktreeInfo{RepoRoot: repo}}
+	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{RepoRoot: repo}}
 	if err := d.Sync(false, ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestSyncFailsWhenHerdrUnavailable(t *testing.T) {
 		}
 		return nil, nil
 	})
-	if err := d.Sync(true, herdr.Context{}); err == nil {
+	if err := d.Sync(true, domain.HerdrContext{}); err == nil {
 		t.Fatal("want error")
 	}
 	assertNoPrefix(t, f, "wtm")

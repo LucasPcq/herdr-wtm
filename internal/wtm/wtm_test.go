@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
@@ -21,7 +22,7 @@ func TestListParsesFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []wtm.Worktree{
+	want := []domain.Worktree{
 		{Branch: "main", Path: "/Users/me/dev/app", IsParent: true},
 		{Branch: "feat/login", Path: "/Users/me/dev/app.worktrees/feat login"},
 	}

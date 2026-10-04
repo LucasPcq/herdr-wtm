@@ -4,16 +4,16 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
 
 func TestLaunchFromLinkedWorktreePassesOrigin(t *testing.T) {
 	d, f, _ := newDeps(nil)
-	ctx := herdr.Context{
+	ctx := domain.HerdrContext{
 		WorkspaceID:    "w2",
 		FocusedPaneCWD: "/nx/app.wt/a/src",
-		Worktree:       &herdr.WorktreeInfo{CheckoutPath: "/nx/app.wt/a", RepoRoot: repo, IsLinked: true},
+		Worktree:       &domain.WorktreeInfo{CheckoutPath: "/nx/app.wt/a", RepoRoot: repo, IsLinked: true},
 	}
 	if err := d.Launch("clean", ctx); err != nil {
 		t.Fatal(err)
@@ -26,7 +26,7 @@ func TestLaunchFromLinkedWorktreePassesOrigin(t *testing.T) {
 
 func TestLaunchFromMainCheckoutHasNoOrigin(t *testing.T) {
 	d, f, _ := newDeps(nil)
-	ctx := herdr.Context{Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 	if err := d.Launch("create", ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestLaunchFallsBackToGit(t *testing.T) {
 		}
 		return nil, nil
 	})
-	if err := d.Launch("ui", herdr.Context{WorkspaceCWD: "/nx/app/sub"}); err != nil {
+	if err := d.Launch("ui", domain.HerdrContext{WorkspaceCWD: "/nx/app/sub"}); err != nil {
 		t.Fatal(err)
 	}
 	if f.Calls[0].Dir != "/nx/app/sub" || f.Calls[0].Name != "git" {
@@ -59,7 +59,7 @@ func TestLaunchFailsOutsideGit(t *testing.T) {
 		}
 		return nil, nil
 	})
-	if err := d.Launch("create", herdr.Context{FocusedPaneCWD: "/nx/scratch"}); err == nil {
+	if err := d.Launch("create", domain.HerdrContext{FocusedPaneCWD: "/nx/scratch"}); err == nil {
 		t.Fatal("want error")
 	}
 	assertNoPrefix(t, f, "herdr plugin pane open")
@@ -67,10 +67,10 @@ func TestLaunchFailsOutsideGit(t *testing.T) {
 
 func TestLaunchRejectsEmptyContextAndUnknownCommand(t *testing.T) {
 	d, f, _ := newDeps(nil)
-	if err := d.Launch("create", herdr.Context{}); err == nil {
+	if err := d.Launch("create", domain.HerdrContext{}); err == nil {
 		t.Fatal("empty context: want error")
 	}
-	if err := d.Launch("nope", herdr.Context{Worktree: &herdr.WorktreeInfo{RepoRoot: repo}}); err == nil {
+	if err := d.Launch("nope", domain.HerdrContext{Worktree: &domain.WorktreeInfo{RepoRoot: repo}}); err == nil {
 		t.Fatal("unknown command: want error")
 	}
 	if len(f.Calls) != 0 {
@@ -80,7 +80,7 @@ func TestLaunchRejectsEmptyContextAndUnknownCommand(t *testing.T) {
 
 func TestLaunchMenu(t *testing.T) {
 	d, f, _ := newDeps(nil)
-	ctx := herdr.Context{Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+	ctx := domain.HerdrContext{Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 	if err := d.Launch("menu", ctx); err != nil {
 		t.Fatal(err)
 	}

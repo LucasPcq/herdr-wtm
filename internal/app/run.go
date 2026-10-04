@@ -6,26 +6,25 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/menu"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
-	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 // Run is the popup entrypoint: run the wtm command, then sync herdr workspaces
 // with what changed.
 func (d Deps) Run(cmd, repo, origin string) error {
-	if !IsCommand(cmd) && cmd != CmdMenu {
+	if !IsCommand(cmd) && cmd != domain.CmdMenu {
 		return d.fail(fmt.Errorf("unknown command %q", cmd))
 	}
 	if repo == "" {
-		return d.fail(errors.New("no repository given (" + EnvRepo + " is empty)"))
+		return d.fail(errors.New("no repository given (" + domain.EnvRepo + " is empty)"))
 	}
 	before, err := d.Wtm.List(repo)
 	if err != nil {
 		return d.fail(err)
 	}
-	if cmd == CmdMenu {
+	if cmd == domain.CmdMenu {
 		chosen, err := d.Choose("wtm · "+filepath.Base(repo), menu.Items(branchAt(before, origin)))
 		if err != nil {
 			return d.fail(err)
@@ -33,17 +32,17 @@ func (d Deps) Run(cmd, repo, origin string) error {
 		switch chosen {
 		case "":
 			return nil
-		case CmdSync:
+		case domain.CmdSync:
 			return d.syncRepo(repo)
 		}
 		cmd = chosen
 	}
-	if cmd == "open" {
+	if cmd == domain.CmdOpen {
 		return d.runOpen(repo)
 	}
 
 	args := []string{cmd}
-	if cmd == "clean" {
+	if cmd == domain.CmdClean {
 		if branch := branchAt(before, origin); branch != "" {
 			args = append(args, branch)
 		}
@@ -96,7 +95,7 @@ func (d Deps) runOpen(repo string) error {
 }
 
 // branchAt returns the branch of the non-primary worktree at origin, or "".
-func branchAt(wts []wtm.Worktree, origin string) string {
+func branchAt(wts []domain.Worktree, origin string) string {
 	if origin == "" {
 		return ""
 	}
@@ -120,7 +119,7 @@ func (d Deps) runShielded(repo string, args []string) error {
 
 // closedOrigin reports whether one of the closed workspaces is the worktree
 // the action was invoked from.
-func closedOrigin(ws []herdr.Workspace, closed []string, origin string) bool {
+func closedOrigin(ws []domain.Workspace, closed []string, origin string) bool {
 	if origin == "" {
 		return false
 	}
@@ -135,10 +134,10 @@ func closedOrigin(ws []herdr.Workspace, closed []string, origin string) bool {
 
 // focusMain brings the user back to the repository's main checkout, opening
 // its workspace when none is open.
-func (d Deps) focusMain(repo string, ws []herdr.Workspace) {
+func (d Deps) focusMain(repo string, ws []domain.Workspace) {
 	target := reconcile.Normalize(repo)
 	var err error
-	if i := slices.IndexFunc(ws, func(w herdr.Workspace) bool {
+	if i := slices.IndexFunc(ws, func(w domain.Workspace) bool {
 		return w.Worktree != nil && !w.Worktree.IsLinked && reconcile.Normalize(w.Worktree.CheckoutPath) == target
 	}); i >= 0 {
 		err = d.Herdr.Focus(ws[i].ID)

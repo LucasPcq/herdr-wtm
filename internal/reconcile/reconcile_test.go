@@ -4,70 +4,69 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/reconcile"
-	"github.com/LucasPcq/herdr-wtm/internal/wtm"
 )
 
 const repo = "/nx/app"
 
-func wt(path string) wtm.Worktree { return wtm.Worktree{Branch: "b", Path: path} }
+func wt(path string) domain.Worktree { return domain.Worktree{Branch: "b", Path: path} }
 
-func linked(id, path string) herdr.Workspace {
-	return herdr.Workspace{ID: id, Worktree: &herdr.WorktreeInfo{CheckoutPath: path, RepoRoot: repo, IsLinked: true}}
+func linked(id, path string) domain.Workspace {
+	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: path, RepoRoot: repo, IsLinked: true}}
 }
 
-func primary(id string) herdr.Workspace {
-	return herdr.Workspace{ID: id, Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+func primary(id string) domain.Workspace {
+	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 }
 
 func TestDiff(t *testing.T) {
 	tests := []struct {
 		name          string
-		before, after []wtm.Worktree
-		ws            []herdr.Workspace
+		before, after []domain.Worktree
+		ws            []domain.Workspace
 		want          reconcile.Plan
 	}{
 		{
 			name:   "created worktree is opened",
-			before: []wtm.Worktree{wt(repo)},
-			after:  []wtm.Worktree{wt(repo), wt("/nx/app.wt/feat a")},
-			ws:     []herdr.Workspace{primary("w1")},
+			before: []domain.Worktree{wt(repo)},
+			after:  []domain.Worktree{wt(repo), wt("/nx/app.wt/feat a")},
+			ws:     []domain.Workspace{primary("w1")},
 			want:   reconcile.Plan{Open: []string{"/nx/app.wt/feat a"}},
 		},
 		{
 			name:   "removed worktree's workspace is closed",
-			before: []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			after:  []wtm.Worktree{wt(repo)},
-			ws:     []herdr.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")},
+			before: []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			after:  []domain.Worktree{wt(repo)},
+			ws:     []domain.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")},
 			want:   reconcile.Plan{Close: []string{"w2"}},
 		},
 		{
 			name:   "ui session adds and removes",
-			before: []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			after:  []wtm.Worktree{wt(repo), wt("/nx/app.wt/b")},
-			ws:     []herdr.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a/")},
+			before: []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			after:  []domain.Worktree{wt(repo), wt("/nx/app.wt/b")},
+			ws:     []domain.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a/")},
 			want:   reconcile.Plan{Open: []string{"/nx/app.wt/b"}, Close: []string{"w2"}},
 		},
 		{
 			name:   "already open worktree is not opened twice",
-			before: []wtm.Worktree{wt(repo)},
-			after:  []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			ws:     []herdr.Workspace{linked("w2", "/nx/app.wt/a")},
+			before: []domain.Worktree{wt(repo)},
+			after:  []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			ws:     []domain.Workspace{linked("w2", "/nx/app.wt/a")},
 			want:   reconcile.Plan{},
 		},
 		{
 			name:   "workspace without worktree info is ignored",
-			before: []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			after:  []wtm.Worktree{wt(repo)},
-			ws:     []herdr.Workspace{{ID: "w9"}},
+			before: []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			after:  []domain.Worktree{wt(repo)},
+			ws:     []domain.Workspace{{ID: "w9"}},
 			want:   reconcile.Plan{},
 		},
 		{
 			name:   "nothing changed",
-			before: []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			after:  []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")},
-			ws:     []herdr.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")},
+			before: []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			after:  []domain.Worktree{wt(repo), wt("/nx/app.wt/a")},
+			ws:     []domain.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")},
 			want:   reconcile.Plan{},
 		},
 	}
@@ -84,9 +83,9 @@ func TestDiff(t *testing.T) {
 func gone(string) bool { return false }
 
 func TestDiffKeepsWorkspaceWhoseFolderStillExists(t *testing.T) {
-	before := []wtm.Worktree{wt(repo), wt("/nx/app.wt/a")}
-	after := []wtm.Worktree{wt(repo)}
-	ws := []herdr.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")}
+	before := []domain.Worktree{wt(repo), wt("/nx/app.wt/a")}
+	after := []domain.Worktree{wt(repo)}
+	ws := []domain.Workspace{primary("w1"), linked("w2", "/nx/app.wt/a")}
 	exists := func(p string) bool { return p == "/nx/app.wt/a" }
 	if got := reconcile.Diff(before, after, ws, exists); len(got.Close) != 0 {
 		t.Fatalf("closed a workspace whose folder is still on disk: %+v", got)
@@ -94,22 +93,22 @@ func TestDiffKeepsWorkspaceWhoseFolderStillExists(t *testing.T) {
 }
 
 func TestDiffNeverClosesPrimary(t *testing.T) {
-	got := reconcile.Diff([]wtm.Worktree{wt(repo)}, nil, []herdr.Workspace{primary("w1")}, gone)
+	got := reconcile.Diff([]domain.Worktree{wt(repo)}, nil, []domain.Workspace{primary("w1")}, gone)
 	if len(got.Close) != 0 {
 		t.Fatalf("closed primary: %+v", got)
 	}
 }
 
 func TestStale(t *testing.T) {
-	ws := []herdr.Workspace{
+	ws := []domain.Workspace{
 		primary("w1"),
 		linked("w2", "/nx/app.wt/gone"),
 		linked("w3", "/nx/app.wt/alive"),
 		linked("w4", "/nx/app.wt/outside-wtm"),
-		{ID: "w5", Worktree: &herdr.WorktreeInfo{CheckoutPath: "/nx/other.wt/gone", RepoRoot: "/nx/other", IsLinked: true}},
+		{ID: "w5", Worktree: &domain.WorktreeInfo{CheckoutPath: "/nx/other.wt/gone", RepoRoot: "/nx/other", IsLinked: true}},
 		{ID: "w6"},
 	}
-	current := []wtm.Worktree{wt(repo), wt("/nx/app.wt/alive")}
+	current := []domain.Worktree{wt(repo), wt("/nx/app.wt/alive")}
 	exists := func(p string) bool { return p == "/nx/app.wt/outside-wtm" }
 	got := reconcile.Stale(repo, current, ws, exists)
 	want := reconcile.Plan{Close: []string{"w2"}}

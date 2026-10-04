@@ -9,20 +9,12 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-)
-
-const (
-	// MenuCommand is the plugin action the binding launches.
-	MenuCommand = "lucaspcq.wtm.menu"
-	// DefaultKey is offered when the user just presses Enter.
-	DefaultKey = "prefix+alt+w"
-
-	marker = "# herdr-wtm plugin"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 )
 
 var (
 	defaultLine = regexp.MustCompile(`^#\s*([a-z_]+)\s*=\s*"([^"]*)"`)
-	menuLine    = regexp.MustCompile(`^\s*command\s*=\s*"` + regexp.QuoteMeta(MenuCommand) + `"`)
+	menuLine    = regexp.MustCompile(`^\s*command\s*=\s*"` + regexp.QuoteMeta(domain.MenuAction) + `"`)
 	validKey    = regexp.MustCompile(`^[a-z0-9+?._-]+$`)
 )
 
@@ -76,7 +68,7 @@ func Used(defaults map[string]string, userConfig string) (map[string]string, err
 			for _, c := range v {
 				key, _ := c["key"].(string)
 				command, _ := c["command"].(string)
-				if key != "" && command != MenuCommand {
+				if key != "" && command != domain.MenuAction {
 					used[normalize(key)] = command
 				}
 			}
@@ -138,7 +130,7 @@ func SetMenuKey(config, key string) string {
 		block := lines[i:end]
 		if !containsMenu(block) {
 			kept = append(kept, block...)
-		} else if n := len(kept); n > 0 && strings.TrimSpace(kept[n-1]) == marker {
+		} else if n := len(kept); n > 0 && strings.TrimSpace(kept[n-1]) == domain.KeybindMarker {
 			kept = kept[:n-1]
 		}
 		i = end
@@ -147,7 +139,7 @@ func SetMenuKey(config, key string) string {
 	if out != "" {
 		out += "\n\n"
 	}
-	return out + fmt.Sprintf("%s\n[[keys.command]]\nkey = %q\ntype = \"plugin_action\"\ncommand = %q\ndescription = \"wtm menu\"\n", marker, key, MenuCommand)
+	return out + fmt.Sprintf("%s\n[[keys.command]]\nkey = %q\ntype = \"plugin_action\"\ncommand = %q\ndescription = \"wtm menu\"\n", domain.KeybindMarker, key, domain.MenuAction)
 }
 
 func containsMenu(block []string) bool {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -25,13 +26,13 @@ func Items(cleanBranch string) []Item {
 		clean = fmt.Sprintf("Clean this worktree (%s)", cleanBranch)
 	}
 	return []Item{
-		{Cmd: "create", Label: "New worktree"},
-		{Cmd: "open", Label: "Open a worktree"},
-		{Cmd: "checkout", Label: "Checkout a pull request"},
-		{Cmd: "clean", Label: clean},
-		{Cmd: "prune", Label: "Prune finished worktrees"},
-		{Cmd: "ui", Label: "Dashboard"},
-		{Cmd: "sync", Label: "Sync workspaces"},
+		{Cmd: domain.CmdCreate, Label: "New worktree"},
+		{Cmd: domain.CmdOpen, Label: "Open a worktree"},
+		{Cmd: domain.CmdCheckout, Label: "Checkout a pull request"},
+		{Cmd: domain.CmdClean, Label: clean},
+		{Cmd: domain.CmdPrune, Label: "Prune finished worktrees"},
+		{Cmd: domain.CmdUI, Label: "Dashboard"},
+		{Cmd: domain.CmdSync, Label: "Sync workspaces"},
 	}
 }
 

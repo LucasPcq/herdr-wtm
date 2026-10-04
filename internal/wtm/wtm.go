@@ -7,15 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
-
-// Worktree is the part of `wtm list --output json` the plugin uses.
-type Worktree struct {
-	Branch   string `json:"branch"`
-	Path     string `json:"path"`
-	IsParent bool   `json:"is_parent"`
-}
 
 // Client runs wtm commands.
 type Client struct {
@@ -24,12 +18,12 @@ type Client struct {
 }
 
 // List returns every worktree of the repository at repo.
-func (c Client) List(repo string) ([]Worktree, error) {
+func (c Client) List(repo string) ([]domain.Worktree, error) {
 	out, err := c.Runner.Output(execx.Cmd{Dir: repo, Name: c.Bin, Args: []string{"list", "--output", "json"}})
 	if err != nil {
 		return nil, fmt.Errorf("wtm list: %w", err)
 	}
-	var wts []Worktree
+	var wts []domain.Worktree
 	if err := json.Unmarshal(out, &wts); err != nil {
 		return nil, fmt.Errorf("parse wtm list output: %w", err)
 	}

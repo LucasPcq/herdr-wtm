@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
-	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 )
 
 // cleanWorld: worktree /nx/app.wt/a disappears during the command; ws lists the workspaces herdr shows.
-func cleanWorld(ws []herdr.Workspace, failOn string) func(execx.Call) ([]byte, error) {
+func cleanWorld(ws []domain.Workspace, failOn string) func(execx.Call) ([]byte, error) {
 	list := snapshots(listJSON(mainWT(), wt("feat/a", "/nx/app.wt/a"), wt("feat/b", "/nx/app.wt/b")), listJSON(mainWT(), wt("feat/b", "/nx/app.wt/b")))
 	return func(c execx.Call) ([]byte, error) {
 		switch c.Line() {
@@ -33,7 +33,7 @@ func cleanWorld(ws []herdr.Workspace, failOn string) func(execx.Call) ([]byte, e
 }
 
 func TestCleanOfOriginFocusesMainCheckout(t *testing.T) {
-	d, f, _ := newDeps(cleanWorld([]herdr.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, ""))
+	d, f, _ := newDeps(cleanWorld([]domain.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, ""))
 	if err := d.Run("clean", repo, "/nx/app.wt/a"); err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestCleanOfOriginFocusesMainCheckout(t *testing.T) {
 }
 
 func TestCleanOfOriginOpensMainCheckoutWhenNotOpen(t *testing.T) {
-	d, f, _ := newDeps(cleanWorld([]herdr.Workspace{linkedWS("w2", "/nx/app.wt/a")}, ""))
+	d, f, _ := newDeps(cleanWorld([]domain.Workspace{linkedWS("w2", "/nx/app.wt/a")}, ""))
 	if err := d.Run("clean", repo, "/nx/app.wt/a"); err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +54,7 @@ func TestCleanOfOriginOpensMainCheckoutWhenNotOpen(t *testing.T) {
 }
 
 func TestCleanOfAnotherWorktreeKeepsFocus(t *testing.T) {
-	d, f, _ := newDeps(cleanWorld([]herdr.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a"), linkedWS("w3", "/nx/app.wt/b")}, ""))
+	d, f, _ := newDeps(cleanWorld([]domain.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a"), linkedWS("w3", "/nx/app.wt/b")}, ""))
 	if err := d.Run("clean", repo, "/nx/app.wt/b"); err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestOriginNotClosedWhenCloseFails(t *testing.T) {
 		if c.Line() == "herdr workspace close w2" {
 			return nil, errors.New("busy")
 		}
-		return cleanWorld([]herdr.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, "")(c)
+		return cleanWorld([]domain.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, "")(c)
 	})
 	if err := d.Run("clean", repo, "/nx/app.wt/a"); err != nil {
 		t.Fatal(err)
@@ -77,7 +77,7 @@ func TestOriginNotClosedWhenCloseFails(t *testing.T) {
 }
 
 func TestFocusMainFailureIsReported(t *testing.T) {
-	d, f, _ := newDeps(cleanWorld([]herdr.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, "focus"))
+	d, f, _ := newDeps(cleanWorld([]domain.Workspace{primaryWS(), linkedWS("w2", "/nx/app.wt/a")}, "focus"))
 	if err := d.Run("clean", repo, "/nx/app.wt/a"); err != nil {
 		t.Fatal(err)
 	}

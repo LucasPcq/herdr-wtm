@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/keybind"
 )
 
@@ -71,7 +72,7 @@ func (d Deps) Bind() error {
 func (d Deps) askKey(used map[string]string) (key string, ok bool) {
 	in := bufio.NewReader(d.In)
 	for {
-		fmt.Fprintf(d.Out, "Key for the wtm menu [%s]: ", keybind.DefaultKey)
+		fmt.Fprintf(d.Out, "Key for the wtm menu [%s]: ", domain.DefaultMenuKey)
 		line, err := in.ReadString('\n')
 		if err != nil && line == "" {
 			return "", false
@@ -81,7 +82,7 @@ func (d Deps) askKey(used map[string]string) (key string, ok bool) {
 		}
 		key = keybind.Normalize(line)
 		if key == "" {
-			key = keybind.DefaultKey
+			key = domain.DefaultMenuKey
 		}
 		if !keybind.ValidKey(key) {
 			fmt.Fprintf(d.Out, "%q is not a valid key (examples: prefix+m, ctrl+alt+w, f12)\n", strings.TrimSpace(line))

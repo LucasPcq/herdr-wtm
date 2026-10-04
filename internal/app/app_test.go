@@ -11,6 +11,7 @@ import (
 
 	"github.com/LucasPcq/herdr-wtm/internal/app"
 	"github.com/LucasPcq/herdr-wtm/internal/config"
+	"github.com/LucasPcq/herdr-wtm/internal/domain"
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 	"github.com/LucasPcq/herdr-wtm/internal/herdr"
 	"github.com/LucasPcq/herdr-wtm/internal/wtm"
@@ -22,28 +23,27 @@ func newDeps(h func(execx.Call) ([]byte, error)) (app.Deps, *execx.Fake, *bytes.
 	f := &execx.Fake{Handler: h}
 	out := &bytes.Buffer{}
 	d := app.Deps{
-		Wtm:      wtm.Client{Runner: f, Bin: "wtm"},
-		Herdr:    herdr.Client{Runner: f, Bin: "herdr"},
-		Git:      f,
-		Config:   config.Default(),
-		PluginID: "lucaspcq.wtm",
-		Out:      out,
-		In:       strings.NewReader("\n"),
-		Exists:   func(string) bool { return false },
-		Log:      log.New(io.Discard, "", 0),
+		Wtm:    wtm.Client{Runner: f, Bin: "wtm"},
+		Herdr:  herdr.Client{Runner: f, Bin: "herdr"},
+		Git:    f,
+		Config: config.Default(),
+		Out:    out,
+		In:     strings.NewReader("\n"),
+		Exists: func(string) bool { return false },
+		Log:    log.New(io.Discard, "", 0),
 	}
 	return d, f, out
 }
 
-func listJSON(wts ...wtm.Worktree) []byte {
+func listJSON(wts ...domain.Worktree) []byte {
 	if wts == nil {
-		wts = []wtm.Worktree{}
+		wts = []domain.Worktree{}
 	}
 	data, _ := json.Marshal(wts)
 	return data
 }
 
-func workspacesJSON(ws ...herdr.Workspace) []byte {
+func workspacesJSON(ws ...domain.Workspace) []byte {
 	data, _ := json.Marshal(map[string]any{"result": map[string]any{"workspaces": ws}})
 	return data
 }
@@ -53,16 +53,16 @@ func openedJSON(id string) []byte {
 	return data
 }
 
-func mainWT() wtm.Worktree { return wtm.Worktree{Branch: "main", Path: repo, IsParent: true} }
+func mainWT() domain.Worktree { return domain.Worktree{Branch: "main", Path: repo, IsParent: true} }
 
-func wt(branch, path string) wtm.Worktree { return wtm.Worktree{Branch: branch, Path: path} }
+func wt(branch, path string) domain.Worktree { return domain.Worktree{Branch: branch, Path: path} }
 
-func primaryWS() herdr.Workspace {
-	return herdr.Workspace{ID: "w1", Worktree: &herdr.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
+func primaryWS() domain.Workspace {
+	return domain.Workspace{ID: "w1", Worktree: &domain.WorktreeInfo{CheckoutPath: repo, RepoRoot: repo}}
 }
 
-func linkedWS(id, path string) herdr.Workspace {
-	return herdr.Workspace{ID: id, Worktree: &herdr.WorktreeInfo{CheckoutPath: path, RepoRoot: repo, IsLinked: true}}
+func linkedWS(id, path string) domain.Workspace {
+	return domain.Workspace{ID: id, Worktree: &domain.WorktreeInfo{CheckoutPath: path, RepoRoot: repo, IsLinked: true}}
 }
 
 // snapshots answers successive `wtm list` calls with each snapshot in turn
@@ -92,4 +92,6 @@ func assertNoPrefix(t *testing.T, f *execx.Fake, prefix string) {
 	}
 }
 
-func wtm0(path string) wtm.Worktree { return wtm.Worktree{Branch: "main", Path: path, IsParent: true} }
+func wtm0(path string) domain.Worktree {
+	return domain.Worktree{Branch: "main", Path: path, IsParent: true}
+}
