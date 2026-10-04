@@ -25,7 +25,7 @@ type Client struct {
 
 // List returns every worktree of the repository at repo.
 func (c Client) List(repo string) ([]Worktree, error) {
-	out, err := c.Runner.Output(repo, c.Bin, "list", "--output", "json")
+	out, err := c.Runner.Output(execx.Cmd{Dir: repo, Name: c.Bin, Args: []string{"list", "--output", "json"}})
 	if err != nil {
 		return nil, fmt.Errorf("wtm list: %w", err)
 	}
@@ -38,14 +38,14 @@ func (c Client) List(repo string) ([]Worktree, error) {
 
 // Run runs an interactive wtm command in repo.
 func (c Client) Run(repo string, args ...string) error {
-	return c.Runner.Interactive(repo, nil, c.Bin, args...)
+	return c.Runner.Interactive(execx.Cmd{Dir: repo, Name: c.Bin, Args: args})
 }
 
 // Resolve shows wtm's worktree picker and returns the chosen path, or "" when
 // the user aborts.
 func (c Client) Resolve(repo string) (string, error) {
 	var out bytes.Buffer
-	if err := c.Runner.Interactive(repo, &out, c.Bin, "resolve"); err != nil {
+	if err := c.Runner.Interactive(execx.Cmd{Dir: repo, Stdout: &out, Name: c.Bin, Args: []string{"resolve"}}); err != nil {
 		return "", fmt.Errorf("wtm resolve: %w", err)
 	}
 	return strings.TrimSpace(out.String()), nil

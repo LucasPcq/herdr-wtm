@@ -1,11 +1,10 @@
 package wtm
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
-	"fmt"
-	"os/exec"
+
+	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
 
 // Event is one line of `wtm events --output json` (schema v1), reduced to the
@@ -35,26 +34,12 @@ type EventWorktree struct {
 // line until the stream ends or ctx is cancelled. It returns the process's
 // exit error; a clean end of stream is nil.
 func (c Client) Events(ctx context.Context, repo string, handle func(Event)) error {
-	cmd := exec.CommandContext(ctx, c.Bin, "events", "--repo", repo, "--output", "json")
-	cmd.Dir = repo
-	out, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("wtm events: %w", err)
-	}
-	sc := bufio.NewScanner(out)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for sc.Scan() {
+	cmd := execx.Cmd{Dir: repo, Name: c.Bin, Args: []string{"events", "--repo", repo, "--output", "json"}}
+	return c.Runner.Stream(ctx, cmd, func(line []byte) {
 		var ev Event
-		if err := json.Unmarshal(sc.Bytes(), &ev); err != nil {
-			continue
+		if err := json.Unmarshal(line, &ev); err != nil {
+			return
 		}
 		handle(ev)
-	}
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("wtm events: %w", err)
-	}
-	return sc.Err()
+	})
 }

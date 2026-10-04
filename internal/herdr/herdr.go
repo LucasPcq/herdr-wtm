@@ -39,7 +39,7 @@ type Client struct {
 }
 
 func (c Client) Workspaces() ([]Workspace, error) {
-	out, err := c.Runner.Output("", c.Bin, "workspace", "list")
+	out, err := c.output("workspace", "list")
 	if err != nil {
 		return nil, fmt.Errorf("herdr workspace list: %w", err)
 	}
@@ -56,7 +56,7 @@ func (c Client) Workspaces() ([]Workspace, error) {
 
 // PaneCWDs returns the working directory of every pane.
 func (c Client) PaneCWDs() ([]string, error) {
-	out, err := c.Runner.Output("", c.Bin, "pane", "list")
+	out, err := c.output("pane", "list")
 	if err != nil {
 		return nil, fmt.Errorf("herdr pane list: %w", err)
 	}
@@ -85,7 +85,7 @@ func (c Client) OpenWorktree(repo, path string, focus bool) (string, error) {
 	if focus {
 		focusFlag = "--focus"
 	}
-	out, err := c.Runner.Output("", c.Bin, "worktree", "open", "--cwd", repo, "--path", path, focusFlag)
+	out, err := c.output("worktree", "open", "--cwd", repo, "--path", path, focusFlag)
 	if err != nil {
 		return "", fmt.Errorf("herdr worktree open: %w", err)
 	}
@@ -134,7 +134,7 @@ func (c Client) OpenPopup(p PopupParams) error {
 }
 
 func (c Client) run(args ...string) error {
-	if _, err := c.Runner.Output("", c.Bin, args...); err != nil {
+	if _, err := c.output(args...); err != nil {
 		return fmt.Errorf("herdr %s: %w", args[0], err)
 	}
 	return nil
@@ -142,7 +142,7 @@ func (c Client) run(args ...string) error {
 
 // DefaultConfig returns `herdr --default-config`, the documented defaults.
 func (c Client) DefaultConfig() (string, error) {
-	out, err := c.Runner.Output("", c.Bin, "--default-config")
+	out, err := c.output("--default-config")
 	if err != nil {
 		return "", fmt.Errorf("herdr --default-config: %w", err)
 	}
@@ -152,7 +152,7 @@ func (c Client) DefaultConfig() (string, error) {
 // ReloadConfig asks the server to reload config.toml and fails unless herdr
 // applied it without diagnostics.
 func (c Client) ReloadConfig() error {
-	out, err := c.Runner.Output("", c.Bin, "server", "reload-config")
+	out, err := c.output("server", "reload-config")
 	if err != nil {
 		return fmt.Errorf("herdr server reload-config: %w", err)
 	}
@@ -169,4 +169,8 @@ func (c Client) ReloadConfig() error {
 		return fmt.Errorf("herdr did not apply the config (status %q): %s", resp.Result.Status, out)
 	}
 	return nil
+}
+
+func (c Client) output(args ...string) ([]byte, error) {
+	return c.Runner.Output(execx.Cmd{Name: c.Bin, Args: args})
 }
