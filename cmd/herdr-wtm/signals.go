@@ -7,9 +7,8 @@ import (
 )
 
 // shieldSignals keeps SIGINT and SIGHUP from killing herdr-wtm while wtm runs
-// in the popup, so the worktrees wtm already changed still get reconciled.
-// Catching (rather than ignoring) leaves the default handlers in place for the
-// wtm child, which stays interruptible. The returned func restores defaults.
+// in the popup; the wtm child keeps the default handlers and stays
+// interruptible.
 func shieldSignals() func() {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt, syscall.SIGHUP)

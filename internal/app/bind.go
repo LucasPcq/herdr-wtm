@@ -26,7 +26,7 @@ func (d Deps) Bind() error {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return d.fail(err)
 	}
-	used, err := keybind.Used(keybind.Defaults(defaults), string(original))
+	used, err := keybind.Used(keybind.UsedParams{Defaults: keybind.Defaults(defaults), UserConfig: string(original)})
 	if err != nil {
 		return d.fail(err)
 	}
@@ -36,19 +36,19 @@ func (d Deps) Bind() error {
 		return nil
 	}
 
-	mode := os.FileMode(0o644)
+	mode := domain.FileMode
 	if info, err := os.Stat(d.HerdrConfig); err == nil {
 		mode = info.Mode().Perm()
 	}
-	if err := os.MkdirAll(filepath.Dir(d.HerdrConfig), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(d.HerdrConfig), domain.DirMode); err != nil {
 		return d.fail(err)
 	}
 	if existed {
-		if err := os.WriteFile(d.HerdrConfig+".bak-herdr-wtm", original, mode); err != nil {
+		if err := os.WriteFile(d.HerdrConfig+domain.BindBackupSuffix, original, mode); err != nil {
 			return d.fail(err)
 		}
 	}
-	if err := os.WriteFile(d.HerdrConfig, []byte(keybind.SetMenuKey(string(original), key)), mode); err != nil {
+	if err := os.WriteFile(d.HerdrConfig, []byte(keybind.SetMenuKey(keybind.SetMenuKeyParams{Config: string(original), Key: key})), mode); err != nil {
 		return d.fail(err)
 	}
 	if err := d.Herdr.ReloadConfig(); err != nil {

@@ -34,7 +34,7 @@ func (d Deps) Run(p RunParams) error {
 	}
 	cmd := p.Cmd
 	if cmd == domain.CmdMenu {
-		chosen, err := d.Choose("wtm · "+filepath.Base(p.Repo), menu.Items(branch))
+		chosen, err := d.Choose(menu.ChooseParams{Title: "wtm · " + filepath.Base(p.Repo), Items: menu.Items(branch)})
 		if err != nil {
 			return d.fail(err)
 		}

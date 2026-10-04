@@ -13,8 +13,9 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/domain"
 )
 
-// herdr's [[startup]] hooks are one-shot, so `watch --detach`
-// re-executes herdr-wtm as `watch` in its own session and returns at once.
+// herdr's [[startup]] hooks are one-shot and herdr supervises no plugin
+// process: `watch --detach` re-executes herdr-wtm as `watch` in its own
+// session and returns at once; the flock keeps one watcher per herdr server.
 
 func detachWatch() error {
 	self, err := os.Executable()

@@ -45,15 +45,20 @@ func Defaults(defaultConfig string) map[string]string {
 // Used maps every key in effect to what owns it: herdr's defaults overlaid
 // with the user's [keys] table, plus the user's custom commands. The wtm menu
 // binding itself is left out, since binding replaces it.
-func Used(defaults map[string]string, userConfig string) (map[string]string, error) {
+type UsedParams struct {
+	Defaults   map[string]string
+	UserConfig string
+}
+
+func Used(p UsedParams) (map[string]string, error) {
 	var cfg struct {
 		Keys map[string]any `toml:"keys"`
 	}
-	if _, err := toml.Decode(userConfig, &cfg); err != nil {
+	if _, err := toml.Decode(p.UserConfig, &cfg); err != nil {
 		return nil, fmt.Errorf("parse herdr config: %w", err)
 	}
 	actions := map[string]string{}
-	for name, key := range defaults {
+	for name, key := range p.Defaults {
 		actions[name] = key
 	}
 	used := map[string]string{}
@@ -66,11 +71,15 @@ func Used(defaults map[string]string, userConfig string) (map[string]string, err
 				continue
 			}
 			for _, c := range v {
-				key, _ := c["key"].(string)
-				command, _ := c["command"].(string)
-				if key != "" && command != domain.MenuAction {
-					used[normalize(key)] = command
+				key, ok := c["key"].(string)
+				if !ok || key == "" {
+					continue
 				}
+				command, ok := c["command"].(string)
+				if !ok || command == domain.MenuAction {
+					continue
+				}
+				used[Normalize(key)] = command
 			}
 		}
 	}
@@ -84,7 +93,7 @@ func Used(defaults map[string]string, userConfig string) (map[string]string, err
 
 // expand turns "prefix+1..9" into prefix+1 … prefix+9.
 func expand(key string) []string {
-	key = normalize(key)
+	key = Normalize(key)
 	if key == "" {
 		return nil
 	}
@@ -104,18 +113,21 @@ func expand(key string) []string {
 	return keys
 }
 
-func normalize(key string) string { return strings.ToLower(strings.TrimSpace(key)) }
-
 // Normalize is the spelling keys are compared in.
-func Normalize(key string) string { return normalize(key) }
+func Normalize(key string) string { return strings.ToLower(strings.TrimSpace(key)) }
 
 // ValidKey accepts herdr's key syntax (lowercase names joined by '+').
 func ValidKey(key string) bool { return validKey.MatchString(key) }
 
 // SetMenuKey returns config with any existing wtm menu binding removed and a
 // new one bound to key appended. Every other line is kept as is.
-func SetMenuKey(config, key string) string {
-	lines := strings.Split(config, "\n")
+type SetMenuKeyParams struct {
+	Config string
+	Key    string
+}
+
+func SetMenuKey(p SetMenuKeyParams) string {
+	lines := strings.Split(p.Config, "\n")
 	var kept []string
 	for i := 0; i < len(lines); {
 		if strings.TrimSpace(lines[i]) != "[[keys.command]]" {
@@ -139,7 +151,7 @@ func SetMenuKey(config, key string) string {
 	if out != "" {
 		out += "\n\n"
 	}
-	return out + fmt.Sprintf("%s\n[[keys.command]]\nkey = %q\ntype = \"plugin_action\"\ncommand = %q\ndescription = \"wtm menu\"\n", domain.KeybindMarker, key, domain.MenuAction)
+	return out + fmt.Sprintf("%s\n[[keys.command]]\nkey = %q\ntype = \"plugin_action\"\ncommand = %q\ndescription = \"wtm menu\"\n", domain.KeybindMarker, p.Key, domain.MenuAction)
 }
 
 func containsMenu(block []string) bool {

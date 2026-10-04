@@ -58,7 +58,7 @@ key = "prefix+alt+w"
 type = "plugin_action"
 command = "lucaspcq.wtm.menu"
 `
-	used, err := keybind.Used(keybind.Defaults(defaultConfig), user)
+	used, err := keybind.Used(keybind.UsedParams{Defaults: keybind.Defaults(defaultConfig), UserConfig: user})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,14 +75,14 @@ command = "lucaspcq.wtm.menu"
 }
 
 func TestUsedRejectsInvalidUserConfig(t *testing.T) {
-	if _, err := keybind.Used(nil, "[keys\n"); err == nil {
+	if _, err := keybind.Used(keybind.UsedParams{UserConfig: "[keys\n"}); err == nil {
 		t.Fatal("want error")
 	}
 }
 
 func TestSetMenuKeyAppendsAndKeepsTheRest(t *testing.T) {
 	config := "[ui]\nsidebar_width = 30" // no trailing newline
-	got := keybind.SetMenuKey(config, "prefix+m")
+	got := keybind.SetMenuKey(keybind.SetMenuKeyParams{Config: config, Key: "prefix+m"})
 	if !strings.HasPrefix(got, config+"\n") {
 		t.Fatalf("existing content changed:\n%s", got)
 	}
@@ -110,7 +110,7 @@ command = "lazygit"
 [ui]
 sidebar_width = 30
 `
-	got := keybind.SetMenuKey(config, "prefix+m")
+	got := keybind.SetMenuKey(keybind.SetMenuKeyParams{Config: config, Key: "prefix+m"})
 	if strings.Count(got, "lucaspcq.wtm.menu") != 1 || strings.Contains(got, "prefix+alt+w") {
 		t.Fatalf("old binding not replaced:\n%s", got)
 	}

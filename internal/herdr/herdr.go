@@ -10,7 +10,6 @@ import (
 	"github.com/LucasPcq/herdr-wtm/internal/execx"
 )
 
-// PopupParams describes a plugin popup to open.
 type PopupParams struct {
 	Plugin     string
 	Entrypoint string
@@ -19,7 +18,6 @@ type PopupParams struct {
 	Env        map[string]string
 }
 
-// Client runs herdr CLI commands.
 type Client struct {
 	Runner execx.Runner
 	Bin    string
@@ -41,7 +39,6 @@ func (c Client) Workspaces() ([]domain.Workspace, error) {
 	return resp.Result.Workspaces, nil
 }
 
-// PaneCWDs returns the working directory of every pane.
 func (c Client) PaneCWDs() ([]string, error) {
 	out, err := c.output("pane", "list")
 	if err != nil {
@@ -72,7 +69,6 @@ type OpenParams struct {
 	Focus bool
 }
 
-// OpenWorktree opens the worktree at Path as a workspace of Repo and returns its id.
 func (c Client) OpenWorktree(p OpenParams) (string, error) {
 	focusFlag := "--no-focus"
 	if p.Focus {

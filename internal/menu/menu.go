@@ -9,7 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Item is one menu entry: the plugin command it runs and its label.
 type Item struct {
 	Cmd   string
 	Label string
@@ -46,9 +45,12 @@ type Model struct {
 	Quit   bool
 }
 
-func New(title string, items []Item) Model {
-	return Model{Title: title, Items: items}
+type ChooseParams struct {
+	Title string
+	Items []Item
 }
+
+func New(p ChooseParams) Model { return Model{Title: p.Title, Items: p.Items} }
 
 func (m Model) Init() tea.Cmd { return nil }
 
@@ -100,7 +102,7 @@ func (m Model) View() string {
 		}
 		fmt.Fprintf(&b, "%s%d  %s\n", marker, i+1, it.Label)
 	}
-	b.WriteString("\n↑↓ / click: choose   ⏎: run   1-7: run   esc: close\n")
+	fmt.Fprintf(&b, "\n↑↓ / click: choose   ⏎: run   1-%d: run   esc: close\n", len(m.Items))
 	return b.String()
 }
 
@@ -114,12 +116,16 @@ func (m Model) choose(i int) (tea.Model, tea.Cmd) {
 	return m, tea.Quit
 }
 
-// Choose shows the menu full-screen with mouse support and returns the chosen
+// Choose shows the menu full screen with mouse support and returns the chosen
 // command, or "" when the user cancels.
-func Choose(title string, items []Item) (string, error) {
-	final, err := tea.NewProgram(New(title, items), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
+func Choose(p ChooseParams) (string, error) {
+	final, err := tea.NewProgram(New(p), tea.WithAltScreen(), tea.WithMouseCellMotion()).Run()
 	if err != nil {
 		return "", fmt.Errorf("menu: %w", err)
 	}
-	return final.(Model).Chosen, nil
+	m, ok := final.(Model)
+	if !ok {
+		return "", fmt.Errorf("menu: unexpected model %T", final)
+	}
+	return m.Chosen, nil
 }

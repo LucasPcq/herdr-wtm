@@ -12,13 +12,13 @@ import (
 )
 
 // chooser returns a fake Chooser answering pick, recording what it was shown.
-func chooser(pick string, err error, seen *[]menu.Item, title *string) func(string, []menu.Item) (string, error) {
-	return func(t string, items []menu.Item) (string, error) {
+func chooser(pick string, err error, seen *[]menu.Item, title *string) app.Chooser {
+	return func(p menu.ChooseParams) (string, error) {
 		if seen != nil {
-			*seen = items
+			*seen = p.Items
 		}
 		if title != nil {
-			*title = t
+			*title = p.Title
 		}
 		return pick, err
 	}
@@ -131,7 +131,7 @@ func TestRunMenuShieldsOnlyTheWtmCommand(t *testing.T) {
 		}
 		return nil, nil
 	})
-	d.Choose = func(string, []menu.Item) (string, error) {
+	d.Choose = func(menu.ChooseParams) (string, error) {
 		events = append(events, "menu")
 		return "prune", nil
 	}

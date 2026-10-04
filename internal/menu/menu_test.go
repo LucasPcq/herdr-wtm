@@ -39,7 +39,9 @@ func send(m menu.Model, msgs ...tea.Msg) (menu.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func newMenu() menu.Model { return menu.New("wtm · app", menu.Items("feat/a")) }
+func newMenu() menu.Model {
+	return menu.New(menu.ChooseParams{Title: "wtm · app", Items: menu.Items("feat/a")})
+}
 
 func TestItemsOrderAndCleanLabel(t *testing.T) {
 	items := menu.Items("feat/a")

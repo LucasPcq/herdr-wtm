@@ -1,11 +1,13 @@
 // Command herdr-wtm is the herdr plugin binary for wtm.
 //
-//	herdr-wtm launch <menu|bind|create|checkout|open|clean|prune|ui>   (herdr action)
-//	herdr-wtm run                                           (popup entrypoint)
-//	herdr-wtm sync [--all]                                  (action / startup)
+//	herdr-wtm launch <menu|bind|create|checkout|open|clean|prune|ui>   herdr action
+//	herdr-wtm run                                                     popup entrypoint
+//	herdr-wtm sync                                                    herdr action
+//	herdr-wtm watch [--detach]                                        startup hook
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -27,87 +29,106 @@ import (
 func main() {
 	_ = os.Setenv(domain.EnvNoUpdateCheck, "1")
 	logger := newLogger(os.Getenv(domain.EnvPluginState))
-
-	herdrBin := os.Getenv(domain.EnvHerdrBin)
-	if herdrBin == "" {
-		herdrBin = domain.DefaultHerdrBin
-	}
+	herdrBin := cmp.Or(os.Getenv(domain.EnvHerdrBin), domain.DefaultHerdrBin)
 	runner := execx.OS{}
-	hc := herdr.Client{Runner: runner, Bin: herdrBin}
 
 	cfg, err := config.Load(os.Getenv(domain.EnvPluginConfig))
 	if err != nil {
 		logger.Print(err)
-		_ = hc.Notify(err.Error())
+		_ = herdr.Client{Runner: runner, Bin: herdrBin}.Notify(err.Error())
 		os.Exit(domain.ExitCodeError)
 	}
 
-	d := newDeps(logger, runner, herdrBin, cfg)
-	if err := dispatch(d, os.Args[1:], os.Getenv); err != nil {
+	d := newDeps(depsParams{Logger: logger, Runner: runner, HerdrBin: herdrBin, Config: cfg})
+	if err := dispatch(dispatchParams{Deps: d, Args: os.Args[1:], Getenv: os.Getenv}); err != nil {
 		logger.Printf("%s: %v", strings.Join(os.Args[1:], " "), err)
 		os.Exit(domain.ExitCodeError)
 	}
 }
 
-// newDeps wires the real collaborators.
-func newDeps(logger *log.Logger, runner execx.Runner, herdrBin string, cfg config.Config) app.Deps {
+type depsParams struct {
+	Logger   *log.Logger
+	Runner   execx.Runner
+	HerdrBin string
+	Config   config.Config
+}
+
+func newDeps(p depsParams) app.Deps {
 	return app.Deps{
-		Wtm:          wtm.Client{Runner: runner, Bin: cfg.WtmBin},
-		Herdr:        herdr.Client{Runner: runner, Bin: herdrBin},
-		Git:          runner,
-		Config:       cfg,
+		Wtm:          wtm.Client{Runner: p.Runner, Bin: p.Config.WtmBin},
+		Herdr:        herdr.Client{Runner: p.Runner, Bin: p.HerdrBin},
+		Git:          p.Runner,
+		Config:       p.Config,
+		FS:           fsx.OS(),
 		Out:          os.Stdout,
 		In:           os.Stdin,
-		FS:           fsx.OS(),
-		Log:          logger,
+		Log:          p.Logger,
 		Choose:       menu.Choose,
 		Shield:       shieldSignals,
 		StartWatcher: detachWatch,
-		// HERDR_CONFIG_PATH overrides herdr's config location, as for herdr itself.
-		HerdrConfig: herdrConfigPath(),
+		HerdrConfig:  herdrConfigPath(),
 	}
 }
 
-func dispatch(d app.Deps, args []string, getenv func(string) string) error {
-	if len(args) == 0 {
-		return errors.New("usage: herdr-wtm launch <cmd> | run | sync [--all]")
+type dispatchParams struct {
+	Deps   app.Deps
+	Args   []string
+	Getenv func(string) string
+}
+
+const usage = "usage: herdr-wtm launch <cmd> | run | sync | watch [--detach]"
+
+func dispatch(p dispatchParams) error {
+	if len(p.Args) == 0 {
+		return errors.New(usage)
 	}
-	switch args[0] {
-	case "launch":
-		if len(args) < 2 {
-			return fmt.Errorf("usage: herdr-wtm launch <%s>", strings.Join(domain.WtmCommands, "|"))
+	switch p.Args[0] {
+	case domain.SubLaunch:
+		return launch(p)
+	case domain.SubRun:
+		if p.Getenv(domain.EnvCmd) == domain.CmdBind {
+			return p.Deps.Bind()
 		}
-		raw := getenv(domain.EnvPluginContext)
-		d.Log.Printf("launch %s context=%s", args[1], raw)
-		ctx, err := herdr.ParseContext(raw)
-		if err == nil {
-			err = d.Launch(app.LaunchParams{Cmd: args[1], Context: ctx})
-		}
-		if err != nil {
-			_ = d.Herdr.Notify(err.Error())
-		}
-		return err
-	case "run":
-		if getenv(domain.EnvCmd) == domain.CmdBind {
-			return d.Bind()
-		}
-		return d.Run(app.RunParams{Cmd: getenv(domain.EnvCmd), Repo: getenv(domain.EnvRepo), Origin: getenv(domain.EnvOrigin)})
-	case "sync":
-		ctx, err := herdr.ParseContext(getenv(domain.EnvPluginContext))
-		if err == nil {
-			err = d.Sync(ctx)
-		}
-		if err != nil {
-			_ = d.Herdr.Notify(err.Error())
-		}
-		return err
-	case "watch":
-		if len(args) > 1 && args[1] == "--detach" {
+		return p.Deps.Run(app.RunParams{Cmd: p.Getenv(domain.EnvCmd), Repo: p.Getenv(domain.EnvRepo), Origin: p.Getenv(domain.EnvOrigin)})
+	case domain.SubSync:
+		return syncWorkspaces(p)
+	case domain.SubWatch:
+		if len(p.Args) > 1 && p.Args[1] == domain.FlagDetach {
 			return detachWatch()
 		}
-		return runWatch(d, getenv(domain.EnvPluginState))
+		return runWatch(p.Deps, p.Getenv(domain.EnvPluginState))
 	}
-	return fmt.Errorf("unknown subcommand %q", args[0])
+	return fmt.Errorf("unknown subcommand %q (%s)", p.Args[0], usage)
+}
+
+func launch(p dispatchParams) error {
+	if len(p.Args) < 2 {
+		return fmt.Errorf("usage: herdr-wtm launch <%s|%s|%s>", domain.CmdMenu, domain.CmdBind, strings.Join(domain.WtmCommands, "|"))
+	}
+	raw := p.Getenv(domain.EnvPluginContext)
+	p.Deps.Log.Printf("launch %s context=%s", p.Args[1], raw)
+	hctx, err := herdr.ParseContext(raw)
+	if err == nil {
+		err = p.Deps.Launch(app.LaunchParams{Cmd: p.Args[1], Context: hctx})
+	}
+	if err != nil {
+		_ = p.Deps.Herdr.Notify(err.Error())
+	}
+	return err
+}
+
+func syncWorkspaces(p dispatchParams) error {
+	if len(p.Args) > 1 {
+		return fmt.Errorf("unexpected argument %q (%s)", p.Args[1], usage)
+	}
+	hctx, err := herdr.ParseContext(p.Getenv(domain.EnvPluginContext))
+	if err == nil {
+		err = p.Deps.Sync(hctx)
+	}
+	if err != nil {
+		_ = p.Deps.Herdr.Notify(err.Error())
+	}
+	return err
 }
 
 func newLogger(stateDir string) *log.Logger {

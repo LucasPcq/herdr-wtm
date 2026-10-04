@@ -16,7 +16,7 @@ import (
 )
 
 // Chooser shows the action menu and returns the chosen command, or "" when cancelled.
-type Chooser func(title string, items []menu.Item) (string, error)
+type Chooser func(p menu.ChooseParams) (string, error)
 
 // Deps carries every collaborator; main wires real ones, tests wire fakes.
 type Deps struct {
@@ -29,9 +29,8 @@ type Deps struct {
 	FS     domain.FS
 	Log    *log.Logger
 	Choose Chooser
-	// Shield, when set, keeps SIGINT/SIGHUP from killing the process while a
-	// wtm command runs, so its changes still get reconciled; it returns the
-	// function that lifts the shield.
+	// Shield, when set, keeps SIGINT/SIGHUP off the popup while wtm runs, so
+	// closing the popup cannot cut a command half-way; it returns the lift.
 	Shield func() func()
 	// HerdrConfig is the path of herdr's config.toml, edited by Bind.
 	HerdrConfig string
