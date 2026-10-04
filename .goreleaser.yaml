@@ -29,6 +29,13 @@ checksum:
 release:
   prerelease: auto
 
-# Release notes come from CHANGELOG.md (make release-notes), not from commits.
+# Release notes come from CHANGELOG.md through --release-notes (make
+# release-notes), which replaces this commit list. Never `disable: true`: it
+# skips the changelog step, --release-notes included, and the release is blank.
 changelog:
-  disable: true
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
